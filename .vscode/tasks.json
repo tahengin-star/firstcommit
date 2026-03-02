@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "PlatformIO: Build",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "platformio",
+        "run"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: Upload",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "platformio",
+        "run",
+        "--target",
+        "upload"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: Monitor",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "platformio",
+        "device",
+        "monitor"
+      ],
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: Upload + Monitor",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe -m platformio run --target upload; ${workspaceFolder}/.venv/Scripts/python.exe -m platformio device monitor",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <title>Servo Joystick Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background:
+                radial-gradient(circle at 15% 20%, rgba(0, 255, 255, 0.16), transparent 35%),
+                radial-gradient(circle at 85% 80%, rgba(167, 90, 255, 0.22), transparent 40%),
+                linear-gradient(140deg, #060913 0%, #0b1022 45%, #11183a 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) 10px;
+            color: #e8f2ff;
+        }
+
+        .container {
+            background: linear-gradient(160deg, rgba(16, 23, 48, 0.78), rgba(19, 28, 62, 0.72));
+            border: 1px solid rgba(130, 160, 255, 0.35);
+            border-radius: 22px;
+            padding: 20px;
+            box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45), 0 0 28px rgba(95, 156, 255, 0.25);
+            backdrop-filter: blur(8px);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .header h1 {
+            color: #dbf6ff;
+            font-size: 24px;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 14px rgba(0, 231, 255, 0.5);
+        }
+
+        .status {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            display: inline-block;
+            font-size: 12px;
+            color: #9fb7d9;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .status.connected {
+            background: rgba(28, 206, 141, 0.2);
+            color: #a4ffd9;
+            border-color: rgba(69, 255, 182, 0.5);
+            box-shadow: 0 0 14px rgba(46, 255, 181, 0.3);
+        }
+
+        .status.disconnected {
+            background: rgba(255, 88, 120, 0.18);
+            color: #ffd0da;
+            border-color: rgba(255, 122, 154, 0.45);
+        }
+
+        .connect-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(130deg, #24d7ff 0%, #4f7dff 45%, #b058ff 100%);
+            color: #f8fcff;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: transform 0.15s, filter 0.15s;
+            box-shadow: 0 10px 22px rgba(75, 130, 255, 0.35);
+        }
+
+        .connect-btn:active {
+            transform: scale(0.985);
+            filter: brightness(1.06);
+        }
+
+        .connect-btn:disabled {
+            opacity: 0.5;
+        }
+
+        .controller {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+            min-height: 250px;
+        }
+
+        .joystick-container {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        canvas {
+            border-radius: 18px;
+            background: radial-gradient(circle at 30% 20%, #1b2858, #121b3f 55%, #0d1530);
+            border: 2px solid rgba(107, 161, 255, 0.65);
+            display: block;
+            touch-action: none;
+            cursor: grab;
+            width: 200px !important;
+            height: 200px !important;
+            box-shadow: inset 0 0 18px rgba(40, 74, 170, 0.75), 0 0 16px rgba(85, 145, 255, 0.45);
+        }
+
+        canvas:active {
+            cursor: grabbing;
+            border-color: rgba(117, 241, 255, 0.92);
+            box-shadow: inset 0 0 22px rgba(40, 74, 170, 0.85), 0 0 22px rgba(78, 229, 255, 0.55);
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.12s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ecf7ff;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+        }
+
+        .btn:active {
+            transform: scale(0.92);
+            box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.45);
+        }
+
+        .btn-select {
+            background: linear-gradient(135deg, #ff9d3c, #ff6f3c);
+            width: 75px;
+            border-radius: 18px;
+            font-size: 12px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #ff5d97, #ff4a66);
+            width: 75px;
+            border-radius: 18px;
+            font-size: 12px;
+        }
+
+        .btn-triangle { background: linear-gradient(135deg, #00c9a7, #00a4d7); }
+        .btn-square { background: linear-gradient(135deg, #ff6f91, #ff9671); }
+        .btn-circle { background: linear-gradient(135deg, #8b6bff, #5ec8ff); }
+        .btn-x { background: linear-gradient(135deg, #ff7ac6, #ff5db1); }
+
+        .info {
+            background: linear-gradient(160deg, rgba(13, 20, 46, 0.86), rgba(19, 30, 63, 0.8));
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 13px;
+            color: #c5d8f7;
+            margin-top: 10px;
+            border: 1px solid rgba(132, 163, 255, 0.35);
+            box-shadow: inset 0 0 16px rgba(90, 135, 255, 0.16);
+        }
+
+        .info strong {
+            display: block;
+            color: #f2f9ff;
+            font-size: 18px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 12px rgba(94, 210, 255, 0.45);
+        }
+
+        .info-small {
+            font-size: 11px;
+            color: #93a8cb;
+        }
+
+        .sim-panel {
+            margin-top: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(132, 163, 255, 0.35);
+            padding: 8px;
+            background: rgba(8, 14, 34, 0.65);
+        }
+
+        .sim-panel canvas {
+            width: 100% !important;
+            height: 120px !important;
+            border-radius: 8px;
+            border: 1px solid rgba(132, 163, 255, 0.35);
+            background: linear-gradient(180deg, rgba(7, 14, 34, 0.95), rgba(12, 22, 44, 0.95));
+            box-shadow: none;
+        }
+
+        .sim-caption {
+            margin-top: 4px;
+            font-size: 11px;
+            color: #9fb7d9;
+            text-align: left;
+        }
+
+        @media (orientation: portrait) and (max-width: 600px) {
+            .container {
+                max-height: 95vh;
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .btn {
+                width: 50px;
+                height: 50px;
+                font-size: 14px;
+            }
+
+            canvas {
+                width: 180px !important;
+                height: 180px !important;
+            }
+
+            .controller {
+                gap: 15px;
+            }
+        }
+
+        @media (orientation: landscape) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                padding: 10px;
+                max-height: 95vh;
+            }
+
+            .header {
+                margin-bottom: 10px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+                margin-bottom: 3px;
+            }
+
+            .connect-btn {
+                padding: 8px;
+                font-size: 12px;
+                margin-bottom: 10px;
+            }
+
+            .controller {
+                gap: 10px;
+                min-height: 200px;
+            }
+
+            canvas {
+                width: 160px !important;
+                height: 160px !important;
+            }
+
+            .btn {
+                width: 48px;
+                height: 48px;
+                font-size: 14px;
+            }
+
+            .info {
+                padding: 8px;
+                font-size: 12px;
+                margin-top: 8px;
+            }
+
+            .info strong {
+                font-size: 16px;
+                margin-bottom: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Servo Control</h1>
+            <div id="status" class="status disconnected">❌ Offline</div>
+            <button id="connectBtn" class="connect-btn">🔗 Connect Bluetooth</button>
+        </div>
+
+        <div class="controller">
+            <div class="joystick-container">
+                <canvas id="joystick" width="200" height="200"></canvas>
+            </div>
+
+            <div class="buttons-container">
+                <div class="button-row">
+                    <button class="btn btn-triangle">△</button>
+                </div>
+                <div class="button-row">
+                    <button class="btn btn-square">□</button>
+                    <button class="btn btn-circle">○</button>
+                </div>
+                <div class="button-row">
+                    <button class="btn btn-x">✕</button>
+                </div>
+                <div style="height: 5px;"></div>
+                <div class="button-row">
+                    <button class="btn btn-select">AUTO BAL</button>
+                </div>
+                <div class="button-row">
+                    <button class="btn btn-start">START</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="info">
+            <strong id="command">-</strong>
+            <div class="info-small">
+                <span id="debug">X: 0, Y: 0</span>
+                <div id="joyStats" style="margin-top: 4px;">JOY: waiting input...</div>
+            </div>
+            <div id="telemetry" class="info-small" style="margin-top: 8px; line-height: 1.45; text-align: left;">
+                <div id="tmDateTime">DT: --/--/---- --:--:--</div>
+                <div id="tmStatus">S1:0% S2:0% BLE:OFF PUMP:OFF SW:OFF</div>
+                <div id="tmBattery">BAT: -- mV</div>
+                <div id="tmAht">AHT: --.-C --.-%</div>
+                <div id="tmBmp">BMP: --.-C ----hPa</div>
+                <div id="tmImu">IMU: T --.-C R 0 P 0</div>
+            </div>
+            <div class="sim-panel">
+                <canvas id="servoSim" width="260" height="120"></canvas>
+                <div id="simState" class="sim-caption">SIM: waiting input...</div>
+            </div>
+            <div id="pumpStatus" style="margin-top: 10px; font-size: 24px;">💧</div>
+        </div>
+    </div>
+
+    <script>
+        // Vibration & Haptic Feedback
+        function vibrate(ms = 50) {
+            if (navigator.vibrate) {
+                navigator.vibrate(ms);
+            }
+        }
+
+        // Wake Lock
+        async function requestWakeLock() {
+            try {
+                if ("wakeLock" in navigator) {
+                    await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.log('Wake Lock failed:', err);
+            }
+        }
+        requestWakeLock();
+
+        // Bluetooth Setup
+        let bluetoothDevice = null;
+        let outputCharacteristic = null;
+        let phoneTimeSyncTimer = null;
+        const telemetryState = {
+            dateTime: '--/--/---- --:--:--',
+            s1: 0,
+            s2: 0,
+            ble: 0,
+            pump: 0,
+            sweep: 0,
+            autoBalance: 0,
+            battery: null,
+            ahtT: null,
+            ahtH: null,
+            bmpT: null,
+            bmpP: null,
+            imuT: null,
+            roll: 0,
+            pitch: 0
+        };
+
+        function updateTelemetryUI() {
+            document.getElementById('tmDateTime').textContent = `DT: ${telemetryState.dateTime}`;
+            document.getElementById('tmStatus').textContent =
+                `S1:${telemetryState.s1}% S2:${telemetryState.s2}% BLE:${telemetryState.ble ? 'ON' : 'OFF'} PUMP:${telemetryState.pump ? 'ON' : 'OFF'} SW:${telemetryState.sweep ? 'ON' : 'OFF'} AB:${telemetryState.autoBalance ? 'ON' : 'OFF'}`;
+            document.getElementById('tmBattery').textContent =
+                `BAT: ${telemetryState.battery ?? '--'} mV`;
+            document.getElementById('tmAht').textContent =
+                `AHT: ${telemetryState.ahtT !== null ? (telemetryState.ahtT / 10).toFixed(1) : '--.-'}C ${telemetryState.ahtH !== null ? (telemetryState.ahtH / 10).toFixed(1) : '--.-'}%`;
+            document.getElementById('tmBmp').textContent =
+                `BMP: ${telemetryState.bmpT !== null ? (telemetryState.bmpT / 10).toFixed(1) : '--.-'}C ${telemetryState.bmpP ?? '----'}hPa`;
+            document.getElementById('tmImu').textContent =
+                `IMU: T ${telemetryState.imuT !== null ? (telemetryState.imuT / 10).toFixed(1) : '--.-'}C R ${telemetryState.roll} P ${telemetryState.pitch}`;
+        }
+
+        function parseTelemetryLine(line) {
+            const parts = line.split(',');
+            if (!parts.length) return;
+
+            const tag = parts[0];
+            if (tag === 'D' && parts.length >= 3) {
+                const d = parts[1] || '';
+                const t = parts[2] || '';
+                if (d.length === 8 && t.length === 6) {
+                    telemetryState.dateTime = `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4,8)} ${t.slice(0,2)}:${t.slice(2,4)}:${t.slice(4,6)}`;
+                }
+            } else if (tag === 'P' && parts.length >= 6) {
+                telemetryState.s1 = parseInt(parts[1], 10) || 0;
+                telemetryState.s2 = parseInt(parts[2], 10) || 0;
+                telemetryState.ble = parseInt(parts[3], 10) || 0;
+                telemetryState.pump = parseInt(parts[4], 10) || 0;
+                telemetryState.sweep = parseInt(parts[5], 10) || 0;
+            } else if (tag === 'B' && parts.length >= 2) {
+                telemetryState.battery = parseInt(parts[1], 10);
+            } else if (tag === 'A' && parts.length >= 3) {
+                telemetryState.ahtT = parseInt(parts[1], 10);
+                telemetryState.ahtH = parseInt(parts[2], 10);
+            } else if (tag === 'R' && parts.length >= 3) {
+                telemetryState.bmpT = parseInt(parts[1], 10);
+                telemetryState.bmpP = parseInt(parts[2], 10);
+            } else if (tag === 'M' && parts.length >= 4) {
+                telemetryState.imuT = parseInt(parts[1], 10);
+                telemetryState.roll = parseInt(parts[2], 10) || 0;
+                telemetryState.pitch = parseInt(parts[3], 10) || 0;
+            } else if (tag === 'L' && parts.length >= 2) {
+                telemetryState.autoBalance = parseInt(parts[1], 10) || 0;
+            }
+
+            updateTelemetryUI();
+        }
+
+        function handleTelemetryNotification(event) {
+            const raw = new TextDecoder().decode(event.target.value);
+            const lines = raw.split(/\r?\n/).filter(Boolean);
+            lines.forEach(parseTelemetryLine);
+        }
+
+        const connectBtn = document.getElementById('connectBtn');
+        const statusDiv = document.getElementById('status');
+
+        connectBtn.addEventListener('click', async () => {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                if (outputCharacteristic) {
+                    try {
+                        await outputCharacteristic.writeValue(new TextEncoder().encode('D\n'));
+                    } catch (e) {
+                        console.log('Could not send BLE disconnected notification');
+                    }
+                }
+                bluetoothDevice.gatt.disconnect();
+            } else {
+                await connectBluetooth();
+            }
+        });
+
+        function buildPhoneTimePacket() {
+            const now = new Date();
+            return `Z,${now.getFullYear()},${now.getMonth() + 1},${now.getDate()},${now.getHours()},${now.getMinutes()},${now.getSeconds()}\n`;
+        }
+
+        async function sendPhoneTime() {
+            if (!outputCharacteristic) return;
+            try {
+                const packet = buildPhoneTimePacket();
+                await outputCharacteristic.writeValue(new TextEncoder().encode(packet));
+            } catch (error) {
+                console.log('Phone time sync failed:', error);
+            }
+        }
+
+        function startPhoneTimeSync() {
+            stopPhoneTimeSync();
+            sendPhoneTime();
+            phoneTimeSyncTimer = setInterval(() => {
+                sendPhoneTime();
+            }, 1000);
+        }
+
+        function stopPhoneTimeSync() {
+            if (phoneTimeSyncTimer) {
+                clearInterval(phoneTimeSyncTimer);
+                phoneTimeSyncTimer = null;
+            }
+        }
+
+        async function connectBluetooth() {
+            try {
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: 'ESP32_Servo' },
+                        { namePrefix: 'ESP32' },
+                        { services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] }
+                    ],
+                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+                });
+
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+                outputCharacteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+                await outputCharacteristic.startNotifications();
+                outputCharacteristic.addEventListener('characteristicvaluechanged', handleTelemetryNotification);
+
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '✅ Connected';
+                connectBtn.textContent = '🔓 Disconnect';
+                vibrate(100);
+
+                bluetoothDevice.addEventListener('gattserverdisconnected', handleDisconnect);
+                
+                // Notify ESP32 that BLE is connected
+                try {
+                    await outputCharacteristic.writeValue(new TextEncoder().encode('C\n'));
+                } catch (e) {
+                    console.log('Could not send BLE connected notification');
+                }
+
+                startPhoneTimeSync();
+            } catch (error) {
+                console.error('Bluetooth Error:', error);
+                vibrate([100, 50, 100]);
+                alert('Connection failed');
+            }
+        }
+
+        function handleDisconnect() {
+            stopPhoneTimeSync();
+            if (outputCharacteristic) {
+                outputCharacteristic.removeEventListener('characteristicvaluechanged', handleTelemetryNotification);
+            }
+            statusDiv.className = 'status disconnected';
+            statusDiv.textContent = '❌ Offline';
+            connectBtn.textContent = '🔗 Connect';
+            bluetoothDevice = null;
+            outputCharacteristic = null;
+            vibrate(50);
+        }
+
+        async function sendCommand(command) {
+            if (outputCharacteristic) {
+                try {
+                    console.log('Sending command:', command);
+                    await outputCharacteristic.writeValue(new TextEncoder().encode(command));
+                    vibrate(20);
+                } catch (error) {
+                    console.error('Send Error:', error);
+                }
+            } else {
+                console.warn('Not connected - command not sent:', command);
+            }
+        }
+
+        // Joystick Canvas
+        const canvas = document.getElementById('joystick');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const maxRadius = 70;
+        const baseRadius = 30;
+
+        let joystickX = 0;
+        let joystickY = 0;
+        let isDragging = false;
+        let lastPacket = '';
+        let lastVibrationTime = 0;
+        let lastSendMs = 0;
+        const sendIntervalMs = 30;
+        const joystickStatsIntervalMs = 1000;
+        let joystickStatsWindowStartMs = Date.now();
+        let joystickStatsPacketCount = 0;
+        let joystickStatsLastSampleMs = 0;
+        let joystickStatsHasPrev = false;
+        let joystickStatsPrevX = 0;
+        let joystickStatsPrevY = 0;
+        let joystickStatsDtSum = 0;
+        let joystickStatsDtMin = Infinity;
+        let joystickStatsDtMax = 0;
+        let joystickStatsAbsDxSum = 0;
+        let joystickStatsAbsDySum = 0;
+        let joystickStatsDxMax = 0;
+        let joystickStatsDyMax = 0;
+
+        const simCanvas = document.getElementById('servoSim');
+        const simCtx = simCanvas.getContext('2d');
+        const simHistoryLength = 120;
+        const servo1History = Array(simHistoryLength).fill(90);
+        const servo2History = Array(simHistoryLength).fill(90);
+        let virtualServo1 = 90;
+        let virtualServo2 = 90;
+
+        function axisPriorityDecision(xNorm, yNorm) {
+            const absX = Math.abs(xNorm);
+            const absY = Math.abs(yNorm);
+            return {
+                updateServo1: absX >= absY,
+                updateServo2: absY >= absX
+            };
+        }
+
+        function drawServoSimulation(modeText) {
+            simCtx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+
+            const w = simCanvas.width;
+            const h = simCanvas.height;
+            const topPad = 16;
+            const bottomPad = 18;
+            const graphH = h - topPad - bottomPad;
+
+            simCtx.strokeStyle = 'rgba(120, 150, 210, 0.35)';
+            simCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = topPad + (graphH * i) / 4;
+                simCtx.beginPath();
+                simCtx.moveTo(0, y);
+                simCtx.lineTo(w, y);
+                simCtx.stroke();
+            }
+
+            const toY = (deg) => {
+                const normalized = Math.max(0, Math.min(180, deg)) / 180;
+                return topPad + graphH - normalized * graphH;
+            };
+
+            simCtx.strokeStyle = '#56e4ff';
+            simCtx.lineWidth = 2;
+            simCtx.beginPath();
+            servo1History.forEach((deg, index) => {
+                const x = (index / (simHistoryLength - 1)) * (w - 1);
+                const y = toY(deg);
+                if (index === 0) simCtx.moveTo(x, y);
+                else simCtx.lineTo(x, y);
+            });
+            simCtx.stroke();
+
+            simCtx.strokeStyle = '#ff8db7';
+            simCtx.lineWidth = 2;
+            simCtx.beginPath();
+            servo2History.forEach((deg, index) => {
+                const x = (index / (simHistoryLength - 1)) * (w - 1);
+                const y = toY(deg);
+                if (index === 0) simCtx.moveTo(x, y);
+                else simCtx.lineTo(x, y);
+            });
+            simCtx.stroke();
+
+            simCtx.fillStyle = '#56e4ff';
+            simCtx.font = '11px Segoe UI';
+            simCtx.fillText(`S1 ${Math.round(virtualServo1)}°`, 6, 12);
+            simCtx.fillStyle = '#ff8db7';
+            simCtx.fillText(`S2 ${Math.round(virtualServo2)}°`, 90, 12);
+            simCtx.fillStyle = '#9fb7d9';
+            simCtx.fillText('0°', w - 30, h - 5);
+            simCtx.fillText('180°', w - 36, topPad + 10);
+
+            document.getElementById('simState').textContent =
+                `SIM: ${modeText} | S1:${Math.round(virtualServo1)}° S2:${Math.round(virtualServo2)}°`;
+        }
+
+        function resetJoystickStatsWindow(nowMs) {
+            joystickStatsWindowStartMs = nowMs;
+            joystickStatsPacketCount = 0;
+            joystickStatsDtSum = 0;
+            joystickStatsDtMin = Infinity;
+            joystickStatsDtMax = 0;
+            joystickStatsAbsDxSum = 0;
+            joystickStatsAbsDySum = 0;
+            joystickStatsDxMax = 0;
+            joystickStatsDyMax = 0;
+        }
+
+        function updateJoystickStatsUI(text) {
+            document.getElementById('joyStats').textContent = text;
+        }
+
+        function updateJoystickInputStats(xNorm, yNorm) {
+            const nowMs = Date.now();
+            joystickStatsPacketCount += 1;
+
+            if (joystickStatsHasPrev) {
+                const dx = Math.abs(xNorm - joystickStatsPrevX);
+                const dy = Math.abs(yNorm - joystickStatsPrevY);
+                const dt = nowMs - joystickStatsLastSampleMs;
+
+                joystickStatsAbsDxSum += dx;
+                joystickStatsAbsDySum += dy;
+                joystickStatsDxMax = Math.max(joystickStatsDxMax, dx);
+                joystickStatsDyMax = Math.max(joystickStatsDyMax, dy);
+                joystickStatsDtSum += dt;
+                joystickStatsDtMin = Math.min(joystickStatsDtMin, dt);
+                joystickStatsDtMax = Math.max(joystickStatsDtMax, dt);
+            }
+
+            joystickStatsPrevX = xNorm;
+            joystickStatsPrevY = yNorm;
+            joystickStatsLastSampleMs = nowMs;
+            joystickStatsHasPrev = true;
+
+            if (nowMs - joystickStatsWindowStartMs >= joystickStatsIntervalMs) {
+                const deltaCount = Math.max(joystickStatsPacketCount - 1, 0);
+                const avgDx = deltaCount > 0 ? joystickStatsAbsDxSum / deltaCount : 0;
+                const avgDy = deltaCount > 0 ? joystickStatsAbsDySum / deltaCount : 0;
+                const avgDt = deltaCount > 0 ? joystickStatsDtSum / deltaCount : 0;
+                const dtMin = Number.isFinite(joystickStatsDtMin) ? joystickStatsDtMin : 0;
+                const quality =
+                    avgDt > 0 && joystickStatsDtMax - dtMin <= 25 && joystickStatsDxMax <= 8 && joystickStatsDyMax <= 8
+                        ? 'SMOOTH'
+                        : (avgDt > 0 ? 'NOISY' : 'WAIT');
+
+                updateJoystickStatsUI(
+                    `JOY:${quality} pkt:${joystickStatsPacketCount} dAvg:${avgDx.toFixed(1)}/${avgDy.toFixed(1)} dMax:${joystickStatsDxMax}/${joystickStatsDyMax} dt:${avgDt.toFixed(1)}ms (${dtMin}-${joystickStatsDtMax})`
+                );
+
+                resetJoystickStatsWindow(nowMs);
+            }
+        }
+
+        function drawJoystick() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background square area
+            ctx.fillStyle = '#f5f5f5';
+            ctx.beginPath();
+            ctx.roundRect(centerX - maxRadius, centerY - maxRadius, maxRadius * 2, maxRadius * 2, 12);
+            ctx.fill();
+
+            // Border
+            ctx.strokeStyle = '#d0d0d0';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(centerX - maxRadius, centerY);
+            ctx.lineTo(centerX + maxRadius, centerY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY - maxRadius);
+            ctx.lineTo(centerX, centerY + maxRadius);
+            ctx.stroke();
+
+            // Direction text
+            ctx.fillStyle = '#999';
+            ctx.font = 'bold 13px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('↑F', centerX, centerY - maxRadius - 12);
+            ctx.fillText('↓B', centerX, centerY + maxRadius + 12);
+            ctx.fillText('←L', centerX - maxRadius - 12, centerY);
+            ctx.fillText('R→', centerX + maxRadius + 12, centerY);
+
+            // Joystick knob
+            ctx.fillStyle = '#667eea';
+            ctx.beginPath();
+            ctx.arc(centerX + joystickX, centerY + joystickY, baseRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Knob border
+            ctx.strokeStyle = '#764ba2';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Center dot
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(centerX + joystickX, centerY + joystickY, 7, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function updateCommand() {
+            const xNorm = Math.round((joystickX / maxRadius) * 100);
+            const yNorm = Math.round((joystickY / maxRadius) * 100);
+            const packet = `J,${xNorm},${yNorm}\n`;
+            const targetServo1 = Math.round(((xNorm + 100) * 180) / 200);
+            const targetServo2 = Math.round(((-yNorm + 100) * 180) / 200);
+            const axisMode = axisPriorityDecision(xNorm, yNorm);
+
+            if (axisMode.updateServo1) {
+                virtualServo1 = targetServo1;
+            }
+            if (axisMode.updateServo2) {
+                virtualServo2 = targetServo2;
+            }
+
+            servo1History.push(virtualServo1);
+            servo2History.push(virtualServo2);
+            if (servo1History.length > simHistoryLength) servo1History.shift();
+            if (servo2History.length > simHistoryLength) servo2History.shift();
+
+            const modeText = axisMode.updateServo1 && axisMode.updateServo2
+                ? 'X=Y -> update both axes'
+                : (axisMode.updateServo1 ? 'X dominant -> update S1 only' : 'Y dominant -> update S2 only');
+
+            updateJoystickInputStats(xNorm, yNorm);
+
+            const now = Date.now();
+            if (packet !== lastPacket || now - lastSendMs >= sendIntervalMs) {
+                lastPacket = packet;
+                lastSendMs = now;
+                sendCommand(packet);
+            }
+
+            document.getElementById('command').textContent = `S1:${Math.round(virtualServo1)} S2:${Math.round(virtualServo2)}`;
+            document.getElementById('debug').textContent = `X:${xNorm}% Y:${yNorm}% | ${modeText}`;
+            drawServoSimulation(modeText);
+
+            if ((xNorm !== 0 || yNorm !== 0) && Date.now() - lastVibrationTime > 70) {
+                vibrate(20);
+                lastVibrationTime = Date.now();
+            }
+            drawJoystick();
+        }
+
+        function handleStart(e) {
+            isDragging = true;
+            handleInput(e);
+        }
+
+        function handleMove(e) {
+            if (isDragging) handleInput(e);
+        }
+
+        function handleEnd() {
+            isDragging = false;
+            joystickX = 0;
+            joystickY = 0;
+            joystickStatsHasPrev = false;
+            updateCommand();
+        }
+
+        function handleInput(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX !== undefined ? e.clientX : e.touches[0].clientX;
+            const clientY = e.clientY !== undefined ? e.clientY : e.touches[0].clientY;
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            joystickX = x - centerX;
+            joystickY = y - centerY;
+
+            joystickX = Math.max(-maxRadius, Math.min(maxRadius, joystickX));
+            joystickY = Math.max(-maxRadius, Math.min(maxRadius, joystickY));
+
+            updateCommand();
+        }
+
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('mouseleave', handleEnd);
+
+        canvas.addEventListener('touchstart', handleStart, false);
+        canvas.addEventListener('touchmove', handleMove, false);
+        canvas.addEventListener('touchend', handleEnd, false);
+
+        // Button handlers
+        let pumpOn = false;
+        document.querySelector('.btn-square').addEventListener('click', () => {
+            sendCommand('T\n');
+            document.getElementById('command').textContent = '🔄 Reset Center';
+            vibrate(100);
+        });
+
+        document.querySelector('.btn-triangle').addEventListener('click', () => {
+            sendCommand('U\n');
+            document.getElementById('command').textContent = '▲ Servo1 Sweep';
+            vibrate([50, 50, 50]);
+        });
+
+        document.querySelector('.btn-circle').addEventListener('click', () => {
+            sendCommand('M\n');
+            pumpOn = true;
+            updatePumpStatus();
+            document.getElementById('command').textContent = '💦 PUMP ON';
+            vibrate(100);
+        });
+
+        document.querySelector('.btn-x').addEventListener('click', () => {
+            sendCommand('N\n');
+            pumpOn = false;
+            updatePumpStatus();
+            document.getElementById('command').textContent = '❌ PUMP OFF';
+            vibrate(100);
+        });
+
+        document.querySelector('.btn-select').addEventListener('click', () => {
+            sendCommand('Q\n');
+            document.getElementById('command').textContent = '⚖️ AUTO BAL TOGGLE';
+            vibrate([80, 40, 80]);
+        });
+
+        document.querySelector('.btn-start').addEventListener('click', () => {
+            sendCommand('P\n');
+            document.getElementById('command').textContent = '📊 INFO SCREEN';
+            vibrate([100, 50, 100]);
+        });
+
+        function updatePumpStatus() {
+            const statusEl = document.getElementById('pumpStatus');
+            if (pumpOn) {
+                statusEl.textContent = '💦 ON';
+                statusEl.style.color = '#FF6B6B';
+            } else {
+                statusEl.textContent = '💧';
+                statusEl.style.color = '#999';
+            }
+        }
+
+        // Prevent scrolling
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+
+        // Initial draw
+        drawJoystick();
+        drawServoSimulation('waiting input...');
+        updatePumpStatus();
+        updateTelemetryUI();
+
+        // Prevent zoom
+        document.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
