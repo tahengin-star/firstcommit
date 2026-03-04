@@ -235,6 +235,13 @@ unsigned long lastStatusLedBlinkMs = 0;
 const unsigned long statusLedBlinkIntervalMs = 350;
 int batteryVoltage = 0;
 const int batteryPin = 34;  // ADC pin for battery voltage (VP pin)
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+const int i2cSdaPin = 8;
+const int i2cSclPin = 9;
+#else
+const int i2cSdaPin = 21;
+const int i2cSclPin = 22;
+#endif
 bool mpuReady = false;
 bool mpuFallbackMode = false;
 uint8_t mpuWhoAmI = 0;
@@ -352,9 +359,10 @@ void setup() {
   Serial.println("BLE advertising started: ESP32_Servo (FFE0/FFE1)");
 
   // I2C bus init (sensors/RTC)
-  Wire.begin(21, 22); // SDA, SCL
+  Wire.begin(i2cSdaPin, i2cSclPin); // SDA, SCL
   Wire.setClock(100000);
   Wire.setTimeOut(25);
+  Serial.printf("I2C init SDA=%d SCL=%d\n", i2cSdaPin, i2cSclPin);
   scanI2CBus();
 
   // Display runs as separate FreeRTOS task on Core 0
