@@ -5,7 +5,6 @@
 <title>🤖 Modulux Coding for Kids</title>
 <script src="https://unpkg.com/blockly/blockly.min.js"></script>
 <script src="https://unpkg.com/blockly/msg/th.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 /* ========================================================
    THEME: Kid-friendly, bright, Thai primary school
@@ -36,20 +35,60 @@ body {
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
-    font-size: 15px;
+    font-size: 16px;
+    position: relative;
+}
+
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::before {
+    background:
+        radial-gradient(circle at 12% 18%, rgba(255, 206, 84, .22) 0 70px, transparent 72px),
+        radial-gradient(circle at 88% 22%, rgba(116, 185, 255, .20) 0 88px, transparent 90px),
+        radial-gradient(circle at 22% 86%, rgba(0, 206, 201, .18) 0 78px, transparent 80px),
+        radial-gradient(circle at 85% 80%, rgba(108, 92, 231, .18) 0 96px, transparent 98px);
+    animation: bgFloat 14s ease-in-out infinite alternate;
+}
+
+body::after {
+    background-image:
+        linear-gradient(90deg, rgba(255,255,255,.16) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.14) 1px, transparent 1px);
+    background-size: 36px 36px;
+    opacity: .28;
+}
+
+@keyframes bgFloat {
+    0%   { transform: translateY(0px) scale(1); }
+    100% { transform: translateY(-14px) scale(1.02); }
 }
 
 /* ── TOOLBAR ─────────────────────────────────────────── */
 .toolbar {
     background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 50%, #00cec9 100%);
-    padding: 8px 14px;
+    background-size: 180% 180%;
+    padding: 10px 16px;
     display: flex;
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
-    box-shadow: 0 4px 16px rgba(108,92,231,.4);
+    box-shadow: 0 6px 18px rgba(108,92,231,.42);
     position: relative;
     z-index: 10;
+    animation: toolbarGlow 9s ease-in-out infinite;
+}
+
+@keyframes toolbarGlow {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .logo {
@@ -65,19 +104,21 @@ body {
 
 /* buttons */
 button {
-    padding: 7px 15px;
+    padding: 10px 16px;
     border: none;
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     transition: all .18s;
     display: inline-flex;
     align-items: center;
     gap: 5px;
     white-space: nowrap;
+    min-height: 44px;
 }
-button:active { transform: scale(.94); }
+button:hover { transform: translateY(-1px); }
+button:active { transform: scale(.96); }
 button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
 .btn-upload  { background: #e17055; color: white; font-size: .9rem; padding: 9px 20px; border-radius: 10px; box-shadow: 0 3px 10px rgba(225,112,85,.4); }
@@ -91,16 +132,17 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
 /* port/board group */
 .ctrl-group { display: flex; gap: 5px; align-items: center; background: rgba(0,0,0,.15); border-radius: 10px; padding: 4px 10px; }
-.ctrl-group label { font-size: .78rem; color: rgba(255,255,255,.85); white-space: nowrap; font-weight: 600; }
+.ctrl-group label { font-size: .9rem; color: rgba(255,255,255,.92); white-space: nowrap; font-weight: 700; }
 select.ctrl-select {
-    padding: 5px 8px;
+    padding: 9px 10px;
     border-radius: var(--radius-sm);
     border: none;
     background: rgba(255,255,255,.2);
     color: white;
-    font-size: .82rem;
+    font-size: .92rem;
     font-weight: 600;
     cursor: pointer;
+    min-height: 42px;
 }
 select.ctrl-select option { background: #2d3436; color: white; }
 
@@ -115,12 +157,12 @@ select.ctrl-select option { background: #2d3436; color: white; }
 .server-dot.offline { background: #e17055; box-shadow: 0 0 6px #e17055; }
 
 #status {
-    font-size: .78rem; color: rgba(255,255,255,.85); white-space: nowrap;
+    font-size: .9rem; color: rgba(255,255,255,.92); white-space: nowrap;
     background: rgba(0,0,0,.15); padding: 4px 10px; border-radius: 8px; font-weight: 600;
 }
 
 /* ── MAIN AREA ────────────────────────────────────────── */
-#main-container  { display: flex; flex-grow: 1; overflow: hidden; }
+#main-container  { display: flex; flex-grow: 1; overflow: hidden; position: relative; z-index: 1; }
 #blocklyDiv      { flex-grow: 1; height: 100%; min-width: 0; }
 
 /* ── CODE PANEL ──────────────────────────────────────── */
@@ -137,7 +179,7 @@ select.ctrl-select option { background: #2d3436; color: white; }
 .console-resize-handle:hover { background: var(--primary); }
 .console-resize-handle::before { content:''; width:48px; height:3px; background: #585b70; border-radius:4px; }
 
-.console-container { height: 200px; min-height: 70px; max-height: 80vh; background: var(--panel-bg); display: flex; flex-direction: column; flex-shrink: 0; }
+.console-container { height: 280px; min-height: 120px; max-height: 80vh; background: var(--panel-bg); display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 1; }
 .console-header { background: #313244; color: #cdd6f4; padding: 6px 15px; font-size: .8rem; display: flex; justify-content: space-between; align-items: center; font-weight: 700; gap: 10px; }
 .console-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .console-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: .75rem; color: #cdd6f4; background: rgba(255,255,255,.08); border-radius: 6px; padding: 2px 6px; }
@@ -154,6 +196,112 @@ select.ctrl-select option { background: #2d3436; color: white; }
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #45475a; border-radius: 6px; }
+
+/* ── BLOCKLY TOOLBOX LOOK (grouped + icon-friendly) ─── */
+.blocklyToolboxDiv {
+    background: linear-gradient(180deg, #0a4f75 0%, #0b3956 100%) !important;
+    border-right: 2px solid rgba(255,255,255,.16) !important;
+    width: 420px !important;
+}
+.blocklyTreeRow {
+    margin: 6px 8px !important;
+    border-radius: 12px !important;
+    padding: 16px 18px !important;
+    min-height: 114px !important;
+    transition: background .15s ease;
+}
+.blocklyTreeRow:hover {
+    background: rgba(255,255,255,.16) !important;
+}
+.blocklyTreeSelected {
+    background: rgba(255,255,255,.24) !important;
+}
+.blocklyTreeLabel {
+    color: #e7f7ff !important;
+    font-weight: 800 !important;
+    font-size: 34px !important;
+    line-height: 1.1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px;
+}
+.blocklyTreeLabel .cat-emoji {
+    font-size: 80px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.blocklyTreeLabel .cat-text {
+    font-size: 34px;
+    font-weight: 800;
+}
+
+.toolbox-icon-img,
+.toolbox-icon-svg {
+    width: var(--toolbox-icon-size, 30px);
+    height: var(--toolbox-icon-size, 30px);
+    margin-right: 10px;
+    flex-shrink: 0;
+    vertical-align: middle;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.15));
+}
+
+.blocklyFlyoutBackground {
+    fill: #d9f4ff !important;
+    fill-opacity: .98 !important;
+}
+
+.blocklyTrash {
+    cursor: pointer !important;
+}
+
+.confirm-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(6, 16, 32, .55);
+    align-items: center;
+    justify-content: center;
+}
+
+.confirm-card {
+    width: min(420px, 92vw);
+    background: #fff8ea;
+    border: 3px solid #ffd36a;
+    border-radius: 18px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.25);
+    padding: 18px;
+}
+
+.confirm-title {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #8a5b00;
+    margin-bottom: 8px;
+}
+
+.confirm-text {
+    font-size: 1rem;
+    color: #4b3a1a;
+    line-height: 1.45;
+}
+
+.confirm-actions {
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-ok {
+    background: #ffa94d;
+    color: white;
+}
+
+.btn-confirm {
+    background: #00b894;
+    color: white;
+}
 
 /* ── VIRTUAL CONTROLLER ─────────────────────────────── */
 .vbtn-panel {
@@ -228,6 +376,12 @@ select.ctrl-select option { background: #2d3436; color: white; }
     .btn-upload { font-size: .85rem; padding: 9px 14px; }
     select.ctrl-select { font-size: .78rem; }
     #status { font-size: .72rem; }
+    .blocklyToolboxDiv { width: 320px !important; }
+    .blocklyTreeRow { min-height: 90px !important; }
+    .blocklyTreeLabel { font-size: 28px !important; }
+    .blocklyTreeLabel .cat-emoji { font-size: 62px; }
+    .blocklyTreeLabel .cat-text { font-size: 28px; }
+    .toolbox-icon-img { width: var(--toolbox-icon-size, 26px); height: var(--toolbox-icon-size, 26px); }
 }
 
 @media (max-width: 600px) {
@@ -301,7 +455,6 @@ select.ctrl-select option { background: #2d3436; color: white; }
     <button class="btn-glass" onclick="saveProject()">🗂️ บันทึก</button>
     <button class="btn-glass" onclick="document.getElementById('fileInput').click()">📁 เปิด</button>
     <input type="file" id="fileInput" style="display:none" onchange="loadProject(event)">
-    <button onclick="showQR()" title="เปิดบนโทรศัพท์ผ่าน QR Code" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:white;border:none;border-radius:10px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:.92rem;">📱 QR Code</button>
 
     <span id="status">ยังไม่เชื่อมต่อ ⚪</span>
 </div>
@@ -314,16 +467,6 @@ select.ctrl-select option { background: #2d3436; color: white; }
     · Compile &amp; Upload ต้องรัน Server บนเครื่องที่ต่อบอร์ด
 </div>
 
-<!-- QR Code Modal -->
-<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;">
-    <div style="background:white;border-radius:20px;padding:30px 40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);max-width:320px;width:90%;">
-        <div style="font-size:1.5rem;font-weight:900;color:#6c5ce7;margin-bottom:6px">📱 เปิด IDE บนโทรศัพท์</div>
-        <div style="font-size:.82rem;color:#636e72;margin-bottom:16px">สแกน QR Code ด้วยกล้องโทรศัพท์<br>(ต้องอยู่ WiFi เดียวกัน)</div>
-        <div id="qr-canvas" style="width:200px;height:200px;border:3px solid #6c5ce7;border-radius:12px;overflow:hidden;background:white;display:flex;align-items:center;justify-content:center;"></div>
-        <div id="qr-url" style="font-size:.75rem;color:#6c5ce7;margin-top:10px;word-break:break-all;font-weight:700;"></div>
-        <button onclick="document.getElementById('qr-modal').style.display='none'" style="margin-top:16px;background:#e17055;color:white;padding:10px 28px;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:.9rem;">&#10005; ปิด</button>
-    </div>
-</div>
 
 <!-- =============== MAIN =============== -->
 <div id="main-container">
@@ -393,44 +536,63 @@ select.ctrl-select option { background: #2d3436; color: white; }
     </div>
 </div>
 
+<!-- Confirm Clear Workspace -->
+<div id="confirm-clear-modal" class="confirm-modal" aria-hidden="true">
+    <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-clear-title">
+        <div class="confirm-title" id="confirm-clear-title">🗑️ ยืนยันการล้างหน้าจอ</div>
+        <div class="confirm-text">ต้องการลบบล็อกทั้งหมดในหน้าจอหรือไม่?</div>
+        <div class="confirm-actions">
+            <button type="button" class="btn-ok" onclick="confirmClearWorkspace()">โอเค</button>
+            <button type="button" class="btn-confirm" onclick="confirmClearWorkspace()">ตกลง</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════════ TOOLBOX ═══════════════ -->
 <xml id="toolbox" style="display:none">
-    <category name="⚙️ เริ่มต้น" colour="210">
+    <category name="🚀 เริ่มต้น" colour="210">
         <block type="arduino_setup"></block>
         <block type="arduino_loop"></block>
     </category>
 
-    <category name="💡 ไฟ LED" colour="45">
-        <block type="led_builtin_on"></block>
-        <block type="led_builtin_off"></block>
-        <block type="led_builtin_toggle"></block>
-        <seperator></seperator>
-        <block type="digital_write"></block>
-        <block type="analog_write"></block>
-    </category>
-
-    <category name="🔌 ขา I/O" colour="230">
+    <category name="🔘 ปุ่มและอินพุต" colour="230">
         <block type="pin_mode"></block>
         <block type="digital_read"></block>
+        <block type="analog_read"></block>
         <block type="button_click_once"></block>
         <block type="button_last_hold_ms"></block>
         <block type="button_toggle_read"></block>
-        <block type="analog_read"></block>
+        <label text="── ปุ่มเสมือนบนจอ ──"></label>
+        <block type="vbtn_read"></block>
+        <block type="vbtn_pressed"><field name="BTN">A</field></block>
+        <block type="vbtn_clear"></block>
     </category>
 
-    <category name="🎯 เซอร์โวมอเตอร์" colour="160">
-        <block type="servo_attach"></block>
-        <block type="servo_move"></block>
-        <block type="servo_button_click_hold"></block>
-    </category>
-
-    <category name="🔊 เสียง บัซเซอร์" colour="290">
+    <category name="💡 เอาต์พุตพื้นฐาน" colour="45">
+        <block type="led_builtin_on"></block>
+        <block type="led_builtin_off"></block>
+        <block type="led_builtin_toggle"></block>
+        <block type="digital_write"></block>
+        <block type="analog_write"></block>
         <block type="buzzer_tone"></block>
         <block type="buzzer_notone"></block>
         <block type="buzzer_beep"></block>
     </category>
 
-    <category name="🌡️ เซ็นเซอร์" colour="120">
+    <category name="⚙️ มอเตอร์และแสง" colour="160">
+        <block type="servo_attach"></block>
+        <block type="servo_move"></block>
+        <block type="servo_button_click_hold"></block>
+        <label text="── RGB LED Strip ──"></label>
+        <block type="neopixel_init"></block>
+        <block type="neopixel_set_color"></block>
+        <block type="neopixel_set_rgb"></block>
+        <block type="neopixel_clear"></block>
+        <block type="neopixel_show"></block>
+        <block type="neopixel_brightness"></block>
+    </category>
+
+    <category name="📡 เซ็นเซอร์" colour="120">
         <label text="─── อุณหภูมิ / ความชื้น DHT ───"></label>
         <block type="dht_init"></block>
         <block type="dht_temperature"></block>
@@ -443,16 +605,7 @@ select.ctrl-select option { background: #2d3436; color: white; }
         <block type="soil_moisture_read"></block>
     </category>
 
-    <category name="🌈 NeoPixel RGB LED" colour="20">
-        <block type="neopixel_init"></block>
-        <block type="neopixel_set_color"></block>
-        <block type="neopixel_set_rgb"></block>
-        <block type="neopixel_clear"></block>
-        <block type="neopixel_show"></block>
-        <block type="neopixel_brightness"></block>
-    </category>
-
-    <category name="📟 จอ LCD" colour="260">
+    <category name="🖥️ จอแสดงผล" colour="260">
         <label text="─── I2C LCD (บอร์ดต่อ SDA/SCL) ───"></label>
         <block type="lcd_i2c_init">
             <field name="NAME">lcd</field><field name="ADDR">0x27</field>
@@ -473,14 +626,7 @@ select.ctrl-select option { background: #2d3436; color: white; }
         <block type="lcd_par_init"><field name="NAME">lcd2</field></block>
     </category>
 
-    <category name="🎮 ปุ่มเสมือน" colour="160">
-        <block type="vbtn_read"></block>
-        <block type="vbtn_pressed"><field name="BTN">A</field></block>
-        <block type="vbtn_clear"></block>
-    </category>
-
-    <category name="📡 Serial" colour="160">
-        <block type="serial_begin"></block>
+    <category name="📟 Serial" colour="160">
         <block type="serial_print">
             <value name="TEXT"><block type="text"><field name="TEXT">Hello World</field></block></value>
         </block>
@@ -491,13 +637,10 @@ select.ctrl-select option { background: #2d3436; color: white; }
         <block type="serial_available"></block>
     </category>
 
-    <category name="⏱️ เวลา" colour="120">
+    <category name="⏱️ เวลาและลูป" colour="120">
         <block type="base_delay_ms"></block>
         <block type="base_delay_s"></block>
         <block type="millis_block"></block>
-    </category>
-
-    <category name="🔁 ลูป" colour="120">
         <block type="while_loop"></block>
         <block type="controls_repeat_ext">
             <value name="TIMES"><block type="math_number"><field name="NUM">10</field></block></value>
@@ -512,22 +655,25 @@ select.ctrl-select option { background: #2d3436; color: white; }
 
     <category name="🔀 เงื่อนไข" colour="210">
         <block type="controls_if"></block>
-        <block type="logic_compare"></block>
         <block type="logic_operation"></block>
         <block type="logic_negate"></block>
         <block type="logic_boolean"></block>
+        <block type="math_compare"><field name="OP">EQ</field></block>
+        <block type="math_compare"><field name="OP">GT</field></block>
+        <block type="math_compare"><field name="OP">LT</field></block>
+        <block type="var_compare_value"></block>
     </category>
 
-    <category name="🔢 ตัวแปร" colour="330" custom="VARIABLE"></category>
-
-    <category name="🧮 ตัวแปรพื้นฐาน" colour="330">
+    <category name="🧮 ตัวแปร" colour="330">
         <block type="var_int_init"></block>
         <block type="var_set_value"></block>
         <block type="var_change_by"></block>
         <block type="var_compare_value"></block>
+        <block type="variables_get"></block>
+        <block type="variables_set"></block>
     </category>
 
-    <category name="➕ คณิตศาสตร์" colour="230">
+    <category name="🔢 คณิตศาสตร์" colour="230">
         <block type="math_number"></block>
         <block type="math_arithmetic"></block>
         <block type="math_modulo"></block>
@@ -565,7 +711,7 @@ select.ctrl-select option { background: #2d3436; color: white; }
         <block type="text_length"></block>
     </category>
 
-    <category name="🛠️ ฟังก์ชัน" colour="290" custom="PROCEDURE"></category>
+    <category name="🔧 ฟังก์ชัน" colour="290" custom="PROCEDURE"></category>
 </xml>
 
 <script>
@@ -1857,7 +2003,81 @@ const workspace = Blockly.inject('blocklyDiv', {
     })
 });
 
+// ensure zoom/trash controls render at correct position after toolbox renders
+setTimeout(() => { if (Blockly.svgResize) Blockly.svgResize(workspace); }, 250);
+window.addEventListener('resize', () => { if (Blockly.svgResize) Blockly.svgResize(workspace); });
+
+function applyToolboxStyles() {
+    const toolbox = document.querySelector('.blocklyToolboxDiv');
+    if (toolbox) {
+        toolbox.style.background = 'linear-gradient(180deg, #0a4f75 0%, #0b3956 100%)';
+        toolbox.style.borderRight = '2px solid rgba(255,255,255,.16)';
+        toolbox.style.width = window.innerWidth <= 900 ? '320px' : '420px';
+    }
+    const rows = document.querySelectorAll('.blocklyTreeRow');
+    rows.forEach((row) => {
+        row.style.minHeight = window.innerWidth <= 900 ? '90px' : '114px';
+        row.style.padding = '16px 18px';
+        row.style.borderRadius = '12px';
+        row.style.margin = '6px 8px';
+    });
+}
+
+setTimeout(applyToolboxStyles, 220);
+window.addEventListener('resize', () => applyToolboxStyles());
+
+// ── Emoji bigger than text (inline styles = highest priority, beats Blockly CSS) ──
+const EMOJI_PX  = 72;
+const TEXT_PX   = 34;
+let _emojiMo = null;
+function wrapToolboxEmoji() {
+    if (_emojiMo) _emojiMo.disconnect();
+    document.querySelectorAll('.blocklyTreeLabel').forEach(label => {
+        // Force label layout via inline style every time (Blockly may reset it)
+        label.style.cssText = 'display:inline-flex!important;align-items:center!important;gap:10px;';
+
+        // Re-wrap if spans lost (Blockly re-render wipes our spans)
+        if (!label.querySelector('.cat-emoji')) {
+            const text = (label.textContent || '').trim();
+            const sp = text.indexOf(' ');
+            if (sp < 1) return;
+            const emoji = text.slice(0, sp);
+            const rest  = text.slice(sp + 1);
+            label.textContent = '';
+            const es = document.createElement('span');
+            es.className = 'cat-emoji';
+            es.textContent = emoji;
+            const ts = document.createElement('span');
+            ts.className = 'cat-text';
+            ts.textContent = rest;
+            label.appendChild(es);
+            label.appendChild(ts);
+        }
+
+        // Always force inline sizes so Blockly CSS cannot win
+        const es = label.querySelector('.cat-emoji');
+        const ts = label.querySelector('.cat-text');
+        if (es) { es.style.cssText = `font-size:${EMOJI_PX}px;line-height:1;flex-shrink:0;`; }
+        if (ts) { ts.style.cssText = `font-size:${TEXT_PX}px;font-weight:800;`; }
+    });
+    const toolbox = document.querySelector('.blocklyToolboxDiv');
+    if (toolbox && _emojiMo) _emojiMo.observe(toolbox, { childList: true, subtree: true });
+}
+setTimeout(() => {
+    const toolbox = document.querySelector('.blocklyToolboxDiv');
+    if (toolbox) {
+        _emojiMo = new MutationObserver(() => wrapToolboxEmoji());
+        _emojiMo.observe(toolbox, { childList: true, subtree: true });
+    }
+    wrapToolboxEmoji();
+}, 300);
+setTimeout(wrapToolboxEmoji, 700);
+window.addEventListener('resize', () => wrapToolboxEmoji());
+
+let isClearingWorkspace = false;
+
 workspace.addChangeListener(() => {
+    if (isClearingWorkspace) return;
     if (document.getElementById('code-panel').classList.contains('visible')) updateCodePreview();
     // auto-save ทุกครั้งที่ workspace เปลี่ยน
     try {
@@ -1870,6 +2090,92 @@ workspace.addChangeListener(() => {
         }
     } catch(e) {}
 });
+
+function showClearConfirm() {
+    const modal = document.getElementById('confirm-clear-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function hideClearConfirm() {
+    const modal = document.getElementById('confirm-clear-modal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function confirmClearWorkspace() {
+    // ลบทุกบล็อกที่วางอยู่แบบชัวร์ พร้อม fallback หลายชั้น
+    isClearingWorkspace = true;
+    try {
+        if (Blockly.Events && Blockly.Events.disable) Blockly.Events.disable();
+
+        const allBlocks = workspace.getAllBlocks(false);
+        for (const b of allBlocks) {
+            try { b.dispose(false, true); } catch (e) {}
+        }
+
+        workspace.clear();
+        if (Blockly.serialization && Blockly.serialization.workspaces) {
+            try { Blockly.serialization.workspaces.load({ blocks: { blocks: [] } }, workspace); } catch (e) {}
+        }
+        if (Blockly.Xml && Blockly.Xml.clearWorkspaceAndLoadFromXml && Blockly.utils && Blockly.utils.xml) {
+            try {
+                const emptyXml = Blockly.utils.xml.textToDom('<xml xmlns="https://developers.google.com/blockly/xml"></xml>');
+                Blockly.Xml.clearWorkspaceAndLoadFromXml(emptyXml, workspace);
+            } catch (e) {}
+        }
+
+        // เผื่อยังเหลือจาก edge-case บางเวอร์ชันของ Blockly
+        let guard = 0;
+        while (workspace.getTopBlocks(false).length > 0 && guard < 30) {
+            const first = workspace.getTopBlocks(false)[0];
+            if (!first) break;
+            try { first.dispose(false, true); } catch (e) { break; }
+            guard++;
+        }
+
+        if (workspace.clearUndo) workspace.clearUndo();
+        if (workspace.clearUndo) workspace.clearUndo();
+        if (workspace.clearCached) workspace.clearCached();
+        localStorage.removeItem('modulux_autosave');
+
+        // บางครั้งเหลือเศษ shadow block บนจอแม้ model ถูกลบแล้ว -> ล้าง layer SVG เพิ่ม
+        const canvas = workspace.getCanvas ? workspace.getCanvas() : null;
+        if (canvas) {
+            while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
+        }
+        const bubble = workspace.getBubbleCanvas ? workspace.getBubbleCanvas() : null;
+        if (bubble) {
+            while (bubble.firstChild) bubble.removeChild(bubble.firstChild);
+        }
+        if (workspace.resizeContents) workspace.resizeContents();
+        if (Blockly.svgResize) Blockly.svgResize(workspace);
+    } catch (e) {
+        console.warn('clear workspace failed:', e);
+    } finally {
+        if (Blockly.Events && Blockly.Events.enable) Blockly.Events.enable();
+        isClearingWorkspace = false;
+    }
+    hideClearConfirm();
+    logToConsole('\n🧹 ล้างหน้าจอบล็อกทั้งหมดแล้ว');
+}
+
+function bindTrashCanConfirm() {
+    // Wait until Blockly has rendered the trash can DOM.
+    setTimeout(() => {
+        const trash = document.querySelector('.blocklyTrash');
+        if (!trash) return;
+        trash.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showClearConfirm();
+        });
+    }, 120);
+}
+
+bindTrashCanConfirm();
 
 // โหลด auto-save เมื่อเปิดหน้า
 (function restoreAutosave() {
@@ -2250,6 +2556,16 @@ function toggleVbtnPanel() {
     arrow.textContent   = hidden ? '▼' : '▶';
 }
 
+function collapseVbtnOnStartup() {
+    const body = document.getElementById('vbtn-body');
+    const arrow = document.getElementById('vbtn-arrow');
+    if (!body || !arrow) return;
+    body.style.display = 'none';
+    arrow.textContent = '▶';
+}
+
+collapseVbtnOnStartup();
+
 async function sendVBtn(event, char) {
     event.preventDefault();
     const btn = document.getElementById('vbtn-' + char);
@@ -2373,20 +2689,41 @@ initSerialMonitorControls();
 // ╔═══════════════════════════════════════════════════════╗
 // 8. Save / Load
 // ╚═══════════════════════════════════════════════════════╝
-function saveProject() {
+async function saveProject() {
     let content, ext, mime;
     try {
-        // Blockly v10+ JSON serialization
         const state = Blockly.serialization.workspaces.save(workspace);
         content = JSON.stringify(state, null, 2);
         ext  = 'modulux';
         mime = 'application/json';
     } catch(err) {
-        // fallback: XML
         content = Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(workspace));
         ext  = 'modulux';
         mime = 'text/xml';
     }
+
+    // File System Access API — เปิด dialog เลือกที่บันทึก + ตั้งชื่อไฟล์ได้ (Chrome)
+    if (window.showSaveFilePicker) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: 'project.' + ext,
+                types: [{
+                    description: 'Modulux Project (.modulux)',
+                    accept: { 'application/json': ['.modulux'] }
+                }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(content);
+            await writable.close();
+            logToConsole('\n💾 บันทึกสำเร็จ: ' + handle.name);
+            return;
+        } catch(e) {
+            if (e.name === 'AbortError') return; // user กด Cancel
+            console.warn('showSaveFilePicker failed, fallback:', e);
+        }
+    }
+
+    // Fallback สำหรับ browser ที่ไม่รองรับ (download อัตโนมัติ)
     const blob = new Blob([content], { type: mime });
     const a = document.createElement('a');
     a.download = 'project.' + ext;
@@ -2422,41 +2759,6 @@ function loadProject(event) {
     event.target.value = '';
 }
 
-// QR Code — ใช้ qrcodejs สร้าง QR Code จาก LAN IP
-let _qrGenerated = false;
-async function showQR() {
-    const modal  = document.getElementById('qr-modal');
-    const canvas = document.getElementById('qr-canvas');
-    const urlEl  = document.getElementById('qr-url');
-    modal.style.display = 'flex';
-    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
-
-    // ดึง LAN IP จาก server
-    let lanUrl = SERVER;
-    try {
-        const res  = await fetch(SERVER + '/info');
-        const info = await res.json();
-        if (info.url && !info.url.includes('127.0.0.1')) {
-            lanUrl = info.url;
-        }
-    } catch(e) {}
-
-    urlEl.textContent = lanUrl;
-
-    if (!_qrGenerated) {
-        canvas.innerHTML = '';
-        new QRCode(canvas, {
-            text:         lanUrl,
-            width:        194,
-            height:       194,
-            colorDark:    '#6c5ce7',
-            colorLight:   '#ffffff',
-            correctLevel: QRCode.CorrectLevel.M
-        });
-        _qrGenerated = true;
-    }
-}
-
 // ═══════════════════════════════════════════════════════
 // 9. Resizable Serial Monitor
 // ═══════════════════════════════════════════════════════
@@ -2473,7 +2775,7 @@ async function showQR() {
     });
     document.addEventListener('mousemove', e => {
         if (!dragging) return;
-        const newH = Math.max(70, Math.min(window.innerHeight * 0.8, startH + (startY - e.clientY)));
+        const newH = Math.max(120, Math.min(window.innerHeight * 0.8, startH + (startY - e.clientY)));
         container.style.height = newH + 'px';
     });
     document.addEventListener('mouseup', () => {
@@ -2482,7 +2784,7 @@ async function showQR() {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
     });
-    handle.addEventListener('dblclick', () => { container.style.height = '200px'; });
+    handle.addEventListener('dblclick', () => { container.style.height = '280px'; });
 })();
 </script>
 </body>
