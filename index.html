@@ -1,647 +1,2220 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="utf-8">
-    <title>Modulux ESP32-S3 IDE</title>
-    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-    <script src="https://unpkg.com/blockly/msg/th.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f0f2f5; }
+<meta charset="utf-8">
+<title>🤖 Modulux Coding for Kids</title>
+<script src="https://unpkg.com/blockly/blockly.min.js"></script>
+<script src="https://unpkg.com/blockly/msg/th.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* ========================================================
+   THEME: Kid-friendly, bright, Thai primary school
+   ======================================================== */
+:root {
+    --primary:   #6c5ce7;
+    --secondary: #00cec9;
+    --accent:    #fdcb6e;
+    --danger:    #e17055;
+    --success:   #00b894;
+    --info:      #74b9ff;
+    --dark:      #2d3436;
+    --bg:        #f0f3ff;
+    --panel-bg:  #1e1e2e;
+    --text-light:#ecf0f1;
+    --shadow:    0 4px 20px rgba(108,92,231,.18);
+    --radius:    14px;
+    --radius-sm: 8px;
+}
 
-        .toolbar { background: #2c3e50; color: white; padding: 10px 16px; display: flex; gap: 10px; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-wrap: wrap; }
-        .logo { font-size: 1.1rem; font-weight: bold; color: #3498db; margin-right: 10px; white-space: nowrap; }
+*, *::before, *::after { box-sizing: border-box; }
 
-        #main-container { display: flex; flex-grow: 1; overflow: hidden; }
-        #blocklyDiv { flex-grow: 1; height: 100%; min-width: 0; }
+body {
+    margin: 0;
+    font-family: 'Segoe UI', 'Sarabun', sans-serif;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 15px;
+}
 
-        #code-panel { width: 380px; min-width: 280px; background: #1e1e1e; display: none; flex-direction: column; border-left: 2px solid #34495e; }
-        #code-panel.visible { display: flex; }
-        #code-panel-header { background: #34495e; color: #bdc3c7; padding: 6px 14px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-        #code-output { flex-grow: 1; color: #dcdcaa; padding: 12px; overflow-y: auto; font-family: 'Consolas', monospace; white-space: pre; font-size: 0.82rem; }
+/* ── TOOLBAR ─────────────────────────────────────────── */
+.toolbar {
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 50%, #00cec9 100%);
+    padding: 8px 14px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 16px rgba(108,92,231,.4);
+    position: relative;
+    z-index: 10;
+}
 
-        .console-resize-handle { height: 6px; background: #34495e; cursor: ns-resize; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .console-resize-handle:hover { background: #3498db; }
-        .console-resize-handle::before { content: ''; width: 40px; height: 2px; background: #7f8c8d; border-radius: 2px; }
-        .console-container { height: 180px; min-height: 60px; max-height: 80vh; background: #1e1e1e; display: flex; flex-direction: column; border-top: none; flex-shrink: 0; }
-        .console-header { background: #34495e; color: #bdc3c7; padding: 5px 15px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-        #console { flex-grow: 1; color: #00ff00; padding: 10px; overflow-y: auto; font-family: 'Consolas', monospace; white-space: pre-wrap; font-size: 0.85rem; }
+.logo {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: white;
+    text-shadow: 1px 2px 6px rgba(0,0,0,.25);
+    white-space: nowrap;
+    letter-spacing: .5px;
+}
 
-        button { padding: 7px 14px; cursor: pointer; border-radius: 6px; border: none; font-weight: 600; transition: 0.2s; font-size: 0.85rem; }
-        button:active { transform: scale(0.95); }
-        .btn-connect    { background: #e67e22; color: white; }
-        .btn-disconnect { background: #e74c3c; color: white; display: none; }
-        .btn-code       { background: #8e44ad; color: white; }
-        .btn-upload     { background: #e74c3c; color: white; font-size: 0.9rem; padding: 8px 18px; }
-        .btn-upload:disabled { background: #7f8c8d; cursor: not-allowed; }
-        .btn-download   { background: #27ae60; color: white; }
-        .btn-save       { background: #3498db; color: white; }
-        .btn-load       { background: #95a5a6; color: white; }
-        .btn-copy       { background: #555; color: #ddd; padding: 3px 10px; font-size: 0.75rem; }
-        .btn-refresh    { background: #34495e; color: white; padding: 7px 10px; }
-        #status { font-size: 0.82rem; margin-left: auto; color: #ecf0f1; white-space: nowrap; }
-        .port-group { display: flex; gap: 4px; align-items: center; }
-        .port-group label { font-size: 0.8rem; color: #bdc3c7; white-space: nowrap; }
-        #port-select { padding: 6px 8px; border-radius: 6px; border: none; font-size: 0.82rem; background: #34495e; color: white; min-width: 110px; }
-        #port-manual { padding: 6px 8px; border-radius: 6px; border: none; font-size: 0.82rem; background: #34495e; color: white; width: 80px; display: none; }
-        #port-manual::placeholder { color: #7f8c8d; }
-        .server-dot { width: 10px; height: 10px; border-radius: 50%; background: #7f8c8d; display: inline-block; margin-right: 4px; }
-        .server-dot.online  { background: #2ecc71; }
-        .server-dot.offline { background: #e74c3c; }
-        .toolbar-sep { width: 1px; background: #4a6580; align-self: stretch; margin: 0 4px; }
-    </style>
+.toolbar-sep { width: 1px; background: rgba(255,255,255,.25); align-self: stretch; margin: 0 2px; }
+
+/* buttons */
+button {
+    padding: 7px 15px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all .18s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+button:active { transform: scale(.94); }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+.btn-upload  { background: #e17055; color: white; font-size: .9rem; padding: 9px 20px; border-radius: 10px; box-shadow: 0 3px 10px rgba(225,112,85,.4); }
+.btn-upload:hover:not(:disabled) { background: #d63031; box-shadow: 0 5px 14px rgba(214,48,49,.45); }
+.btn-connect    { background: #00cec9; color: white; box-shadow: 0 2px 8px rgba(0,206,201,.4); }
+.btn-disconnect { background: #e17055; color: white; display: none; }
+.btn-glass  { background: rgba(255,255,255,.2); color: white; backdrop-filter: blur(4px); border: 1.5px solid rgba(255,255,255,.35); }
+.btn-glass:hover { background: rgba(255,255,255,.35); }
+.btn-copy   { background: #636e72; color: #dfe6e9; padding: 3px 10px; font-size: .75rem; border-radius: 6px; }
+.btn-refresh { background: rgba(255,255,255,.2); color: white; padding: 7px 10px; border: 1.5px solid rgba(255,255,255,.35); }
+
+/* port/board group */
+.ctrl-group { display: flex; gap: 5px; align-items: center; background: rgba(0,0,0,.15); border-radius: 10px; padding: 4px 10px; }
+.ctrl-group label { font-size: .78rem; color: rgba(255,255,255,.85); white-space: nowrap; font-weight: 600; }
+select.ctrl-select {
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: rgba(255,255,255,.2);
+    color: white;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+select.ctrl-select option { background: #2d3436; color: white; }
+
+#port-manual {
+    padding: 5px 8px; border-radius: var(--radius-sm); border: none;
+    background: rgba(255,255,255,.2); color: white; font-size: .82rem; width: 80px; display: none;
+}
+#port-manual::placeholder { color: rgba(255,255,255,.5); }
+
+.server-dot { width: 11px; height: 11px; border-radius: 50%; background: #b2bec3; display: inline-block; flex-shrink: 0; transition: background .3s; }
+.server-dot.online  { background: #00b894; box-shadow: 0 0 6px #00b894; }
+.server-dot.offline { background: #e17055; box-shadow: 0 0 6px #e17055; }
+
+#status {
+    font-size: .78rem; color: rgba(255,255,255,.85); white-space: nowrap;
+    background: rgba(0,0,0,.15); padding: 4px 10px; border-radius: 8px; font-weight: 600;
+}
+
+/* ── MAIN AREA ────────────────────────────────────────── */
+#main-container  { display: flex; flex-grow: 1; overflow: hidden; }
+#blocklyDiv      { flex-grow: 1; height: 100%; min-width: 0; }
+
+/* ── CODE PANEL ──────────────────────────────────────── */
+#code-panel { width: 400px; min-width: 300px; background: var(--panel-bg); display: none; flex-direction: column; border-left: 2px solid #45475a; }
+#code-panel.visible { display: flex; }
+#code-panel-header { background: #313244; color: #cdd6f4; padding: 8px 14px; font-size: .8rem; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+#code-output { flex-grow: 1; color: #a6e3a1; padding: 14px; overflow-y: auto; font-family: 'Cascadia Code','Consolas',monospace; white-space: pre; font-size: .82rem; line-height: 1.55; }
+
+/* ── SERIAL MONITOR ──────────────────────────────────── */
+.console-resize-handle {
+    height: 7px; background: #313244; cursor: ns-resize;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.console-resize-handle:hover { background: var(--primary); }
+.console-resize-handle::before { content:''; width:48px; height:3px; background: #585b70; border-radius:4px; }
+
+.console-container { height: 200px; min-height: 70px; max-height: 80vh; background: var(--panel-bg); display: flex; flex-direction: column; flex-shrink: 0; }
+.console-header { background: #313244; color: #cdd6f4; padding: 6px 15px; font-size: .8rem; display: flex; justify-content: space-between; align-items: center; font-weight: 700; gap: 10px; }
+.console-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.console-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: .75rem; color: #cdd6f4; background: rgba(255,255,255,.08); border-radius: 6px; padding: 2px 6px; }
+.console-toggle input { margin: 0; accent-color: #6c5ce7; }
+.console-clear { cursor: pointer; color: #f38ba8; font-size: .75rem; padding: 3px 8px; background: rgba(243,139,168,.12); border-radius: 6px; }
+.console-clear:hover { background: rgba(243,139,168,.25); }
+.console-send-row { display: flex; gap: 6px; padding: 5px 10px; background: #1e1e2e; flex-shrink: 0; }
+#console-input { flex-grow: 1; background: #313244; border: 1.5px solid #45475a; color: #cdd6f4; border-radius: 7px; padding: 5px 10px; font-size: .83rem; font-family: 'Cascadia Code','Consolas',monospace; }
+#console-input:focus { outline: none; border-color: var(--primary); }
+.btn-serial-send { background: var(--primary); color: white; padding: 5px 14px; font-size: .82rem; border-radius: 7px; }
+#console { flex-grow: 1; color: #a6e3a1; padding: 10px 14px; overflow-y: auto; font-family: 'Cascadia Code','Consolas',monospace; white-space: pre-wrap; font-size: .83rem; line-height: 1.5; }
+
+/* ── SCROLLBARS ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #45475a; border-radius: 6px; }
+
+/* ── VIRTUAL CONTROLLER ─────────────────────────────── */
+.vbtn-panel {
+    padding: 8px 12px;
+    background: #1a1b2e;
+    border-top: 1px solid #2d2f3e;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.vbtn-panel-header {
+    font-size: .72rem;
+    font-weight: 700;
+    color: #a29bfe;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+.vbtn-panel-header span.vbtn-toggle-arrow { font-size:.8rem; transition: transform .2s; }
+.vbtn-body { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.vbtn-group { display: flex; gap: 6px; align-items: center; }
+.vbtn {
+    width: 46px; height: 46px;
+    border-radius: 10px;
+    border: 2px solid #6c5ce7;
+    background: linear-gradient(145deg,#2d2f3e,#1a1b2e);
+    color: #a29bfe;
+    font-size: 1rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all .1s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    display: flex; align-items: center; justify-content: center;
+}
+.vbtn:active, .vbtn.pressed {
+    background: linear-gradient(145deg,#6c5ce7,#a29bfe);
+    color: white;
+    transform: scale(.9);
+    box-shadow: 0 0 10px #6c5ce780;
+}
+.vbtn-dpad {
+    display: grid;
+    grid-template-columns: 46px 46px 46px;
+    grid-template-rows:    46px 46px 46px;
+    gap: 3px;
+}
+.vbtn-dpad .vbtn { width:46px; height:46px; }
+.vbtn-sep { width:1px; height:40px; background:#2d2f3e; margin:0 4px; }
+
+/* ── MOBILE NOTICE BANNER ───────────────────────────── */
+.mobile-notice {
+    display: none;
+    background: linear-gradient(90deg, #fdcb6e, #e17055);
+    color: white;
+    font-size: .82rem;
+    font-weight: 700;
+    padding: 7px 14px;
+    text-align: center;
+    flex-shrink: 0;
+    z-index: 20;
+}
+
+/* ── RESPONSIVE: TABLET / MOBILE ─────────────────────── */
+@media (max-width: 900px) {
+    .toolbar { padding: 6px 10px; gap: 6px; }
+    .logo { font-size: 1rem; }
+    button { padding: 8px 12px; font-size: .8rem; }
+    .btn-upload { font-size: .85rem; padding: 9px 14px; }
+    select.ctrl-select { font-size: .78rem; }
+    #status { font-size: .72rem; }
+}
+
+@media (max-width: 600px) {
+    /* Stack toolbar into 2 rows */
+    .toolbar { padding: 5px 8px; gap: 5px; }
+    .logo { font-size: .95rem; }
+    /* Hide secondary buttons on small screens */
+    .btn-glass { display: none; }
+    .toolbar-sep { display: none; }
+    .ctrl-group { padding: 3px 7px; gap: 4px; }
+    /* Bigger touch targets */
+    button { min-height: 38px; }
+    .btn-upload, .btn-connect, .btn-disconnect { min-height: 42px; padding: 9px 16px; }
+    /* Full-width console input */
+    .console-send-row { padding: 5px; }
+    #console-input { font-size: .9rem; }
+    .btn-serial-send { padding: 8px 14px; }
+    /* Show mobile notice */
+    .mobile-notice { display: block; }
+}
+</style>
 </head>
 <body>
 
-    <div class="toolbar">
-        <div class="logo">🔧 MODULUX ESP32-S3</div>
-        <div class="toolbar-sep"></div>
-        <!-- Port Selector -->
-        <div class="port-group">
-            <span class="server-dot" id="server-dot" title="Server status"></span>
-            <label>Port:</label>
-            <select id="port-select" onchange="onPortSelectChange()"><option value="">-- เลือก Port --</option></select>
-            <input id="port-manual" type="text" placeholder="COM13" title="กรอก Port เอง" />
-            <button class="btn-refresh" onclick="fetchPorts()" title="รีเฟรช Port">🔄</button>
-        </div>
-        <div class="toolbar-sep"></div>
-        <!-- Main Action -->
-        <button class="btn-upload" id="btn-upload" onclick="uploadCode()">🚀 Compile &amp; Upload</button>
-        <div class="toolbar-sep"></div>
-        <!-- Serial Monitor -->
-        <button class="btn-connect"    id="btn-connect"    onclick="connectSerial()">📻 Serial Monitor</button>
-        <button class="btn-disconnect" id="btn-disconnect" onclick="disconnectSerial()">⛔ ปิด Monitor</button>
-        <div class="toolbar-sep"></div>
-        <!-- Secondary -->
-        <button class="btn-code"     onclick="toggleCodePanel()">📋 ดูโค้ด C++</button>
-        <button class="btn-download" onclick="downloadCode()">💾 ดาวน์โหลด .ino</button>
-        <button class="btn-save"     onclick="saveProject()">🗂️ บันทึก</button>
-        <button class="btn-load"     onclick="document.getElementById('fileInput').click()">📁 เปิด</button>
-        <input type="file" id="fileInput" style="display:none" onchange="loadProject(event)">
-        <span id="status">สถานะ: ยังไม่ได้เชื่อมต่อ ⚪</span>
-    </div>
+<!-- ═══════════════ TOOLBAR ═══════════════ -->
+<div class="toolbar">
 
-    <div id="main-container">
-        <div id="blocklyDiv"></div>
-        <div id="code-panel">
-            <div id="code-panel-header">
-                <span>Generated C++ — ESP32-S3 Wroom-1</span>
-                <button class="btn-copy" onclick="copyCode()">📋 คัดลอก</button>
+    <div class="logo">🤖 Modulux Coding</div>
+    <div class="toolbar-sep"></div>
+
+    <!-- Board selector -->
+    <div class="ctrl-group">
+        <label>🔲 บอร์ด:</label>
+        <select id="board-select" class="ctrl-select" onchange="onBoardChange()">
+            <option value="esp32:esp32:esp32s3"          data-name="Modulux ESP32-S3">Modulux ESP32-S3</option>
+            <option value="esp32:esp32:esp32"             data-name="ESP32 DevKit">ESP32 Dev</option>
+            <option value="esp32:esp32:nodemcu-32s"       data-name="NodeMCU-32S">NodeMCU-32S</option>
+            <option value="esp8266:esp8266:nodemcuv2"     data-name="NodeMCU ESP8266">NodeMCU ESP8266</option>
+            <option value="arduino:avr:uno"               data-name="Arduino Uno">Arduino Uno</option>
+            <option value="arduino:avr:nano"              data-name="Arduino Nano">Arduino Nano</option>
+            <option value="arduino:avr:mega"              data-name="Arduino Mega">Arduino Mega</option>
+        </select>
+    </div>
+    <div class="toolbar-sep"></div>
+
+    <!-- Port selector -->
+    <div class="ctrl-group">
+        <span class="server-dot" id="server-dot" title="สถานะ Server"></span>
+        <label>🔌 Port:</label>
+        <select id="port-select" class="ctrl-select" onchange="onPortSelectChange()">
+            <option value="">-- เลือก Port --</option>
+        </select>
+        <input id="port-manual" type="text" placeholder="COM13" title="กรอก Port เอง" />
+        <button class="btn-refresh" onclick="fetchPorts()" title="รีเฟรช Port">🔄</button>
+    </div>
+    <div class="toolbar-sep"></div>
+
+    <!-- Main action -->
+    <button class="btn-upload" id="btn-upload" onclick="uploadCode()">🚀 Compile &amp; Upload</button>
+    <div class="toolbar-sep"></div>
+
+    <!-- Serial Monitor -->
+    <button class="btn-connect"    id="btn-connect"    onclick="connectSerial()">📻 Serial Monitor</button>
+    <button class="btn-disconnect" id="btn-disconnect" onclick="disconnectSerial()">⛔ ปิด Monitor</button>
+    <div class="toolbar-sep"></div>
+
+    <!-- Secondary tools -->
+    <button class="btn-glass" onclick="toggleCodePanel()">📋 ดูโค้ด C++</button>
+    <button class="btn-glass" onclick="downloadCode()">💾 ดาวน์โหลด .ino</button>
+    <button class="btn-glass" id="btn-readcode" onclick="readCodeFromBoard()">📥 ดึงโค้ดจากบอร์ด</button>
+    <button class="btn-glass" onclick="saveProject()">🗂️ บันทึก</button>
+    <button class="btn-glass" onclick="document.getElementById('fileInput').click()">📁 เปิด</button>
+    <input type="file" id="fileInput" style="display:none" onchange="loadProject(event)">
+    <button onclick="showQR()" title="เปิดบนโทรศัพท์ผ่าน QR Code" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:white;border:none;border-radius:10px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:.92rem;">📱 QR Code</button>
+
+    <span id="status">ยังไม่เชื่อมต่อ ⚪</span>
+</div>
+
+<!-- Mobile notice: Web Serial API ไม่รองรับบนมือถือ -->
+<div class="mobile-notice" id="mobile-notice">
+    📱 <strong>โทรศัพท์:</strong>
+    เขียนโปรแกรมได้เลย! ✔️ &nbsp;&nbsp;
+    · Serial Monitor ต้องใช้ Chrome บน PC/Mac &nbsp;
+    · Compile &amp; Upload ต้องรัน Server บนเครื่องที่ต่อบอร์ด
+</div>
+
+<!-- QR Code Modal -->
+<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:20px;padding:30px 40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);max-width:320px;width:90%;">
+        <div style="font-size:1.5rem;font-weight:900;color:#6c5ce7;margin-bottom:6px">📱 เปิด IDE บนโทรศัพท์</div>
+        <div style="font-size:.82rem;color:#636e72;margin-bottom:16px">สแกน QR Code ด้วยกล้องโทรศัพท์<br>(ต้องอยู่ WiFi เดียวกัน)</div>
+        <div id="qr-canvas" style="width:200px;height:200px;border:3px solid #6c5ce7;border-radius:12px;overflow:hidden;background:white;display:flex;align-items:center;justify-content:center;"></div>
+        <div id="qr-url" style="font-size:.75rem;color:#6c5ce7;margin-top:10px;word-break:break-all;font-weight:700;"></div>
+        <button onclick="document.getElementById('qr-modal').style.display='none'" style="margin-top:16px;background:#e17055;color:white;padding:10px 28px;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:.9rem;">&#10005; ปิด</button>
+    </div>
+</div>
+
+<!-- =============== MAIN =============== -->
+<div id="main-container">
+    <div id="blocklyDiv"></div>
+    <div id="code-panel">
+        <div id="code-panel-header">
+            <span>📄 โค้ด C++ ที่สร้างขึ้น</span>
+            <button class="btn-copy" onclick="copyCode()">📋 คัดลอก</button>
+        </div>
+        <pre id="code-output">// กดปุ่ม "ดูโค้ด C++" เพื่อสร้างโค้ด</pre>
+    </div>
+</div>
+
+<!-- Serial Monitor resize handle -->
+<div class="console-resize-handle" id="console-resize-handle"></div>
+
+<!-- Serial Monitor panel -->
+<div class="console-container" id="console-container">
+    <div class="console-header">
+        <span>📡 SERIAL MONITOR</span>
+        <div class="console-tools">
+            <span id="baud-label" style="font-size:.75rem;opacity:.7">115200 baud</span>
+            <label class="console-toggle" title="เปิด/ปิดแสดงเวลาในแต่ละบรรทัด">
+                <input id="toggle-timestamp" type="checkbox" checked />
+                เวลา
+            </label>
+            <label class="console-toggle" title="เลื่อนลงล่างตามข้อความใหม่อัตโนมัติ">
+                <input id="toggle-autoscroll" type="checkbox" checked />
+                เลื่อนอัตโนมัติ
+            </label>
+            <span class="console-clear" onclick="clearConsole()">🗑️ เคลียร์ข้อความ</span>
+        </div>
+    </div>
+    <div id="console">👋 ยินดีต้อนรับสู่ Modulux Coding IDE
+กดปุ่ม 📻 Serial Monitor เพื่อเชื่อมต่อกับบอร์ด</div>
+    <div class="console-send-row">
+        <input id="console-input" placeholder="พิมพ์ข้อความส่งไปบอร์ด แล้วกด Enter หรือกดปุ่ม ➤ ส่ง" onkeydown="if(event.key==='Enter')sendSerial()" />
+        <button class="btn-serial-send" onclick="sendSerial()">➤ ส่ง</button>
+    </div>
+    <!-- Virtual Controller -->
+    <div class="vbtn-panel" id="vbtn-panel">
+        <div class="vbtn-panel-header" onclick="toggleVbtnPanel()">
+            🎮 <strong>Virtual Controller</strong>
+            <span style="font-size:.7rem;opacity:.6;font-weight:400">(กดส่งคำสั่งไปบอร์ด)</span>
+            <span class="vbtn-toggle-arrow" id="vbtn-arrow">▼</span>
+        </div>
+        <div class="vbtn-body" id="vbtn-body">
+            <div class="vbtn-group">
+                <button class="vbtn" id="vbtn-A" ontouchstart="sendVBtn(event,'A')" onmousedown="sendVBtn(event,'A')">A</button>
+                <button class="vbtn" id="vbtn-B" ontouchstart="sendVBtn(event,'B')" onmousedown="sendVBtn(event,'B')">B</button>
+                <button class="vbtn" id="vbtn-C" ontouchstart="sendVBtn(event,'C')" onmousedown="sendVBtn(event,'C')">C</button>
+                <button class="vbtn" id="vbtn-D" ontouchstart="sendVBtn(event,'D')" onmousedown="sendVBtn(event,'D')">D</button>
             </div>
-            <pre id="code-output">// กดปุ่ม "ดูโค้ด C++" เพื่อสร้างโค้ด</pre>
+            <div class="vbtn-sep"></div>
+            <div class="vbtn-dpad">
+                <div></div>
+                <button class="vbtn" id="vbtn-U" ontouchstart="sendVBtn(event,'U')" onmousedown="sendVBtn(event,'U')">▲</button>
+                <div></div>
+                <button class="vbtn" id="vbtn-L" ontouchstart="sendVBtn(event,'L')" onmousedown="sendVBtn(event,'L')">◀</button>
+                <button class="vbtn" id="vbtn-X" ontouchstart="sendVBtn(event,'X')" onmousedown="sendVBtn(event,'X')">●</button>
+                <button class="vbtn" id="vbtn-R" ontouchstart="sendVBtn(event,'R')" onmousedown="sendVBtn(event,'R')">▶</button>
+                <div></div>
+                <button class="vbtn" id="vbtn-W" ontouchstart="sendVBtn(event,'W')" onmousedown="sendVBtn(event,'W')">▼</button>
+                <div></div>
+            </div>
         </div>
     </div>
+</div>
 
-    <div class="console-resize-handle" id="console-resize-handle"></div>
-    <div class="console-container" id="console-container">
-        <div class="console-header">
-            <span>📡 SERIAL MONITOR (อ่านข้อมูลจากบอร์ด)</span>
-            <span onclick="document.getElementById('console').innerText=''" style="cursor:pointer">เคลียร์ [X]</span>
-        </div>
-        <div id="console">ยินดีต้อนรับสู่ Modulux ESP32-S3 IDE... เชื่อมต่อบอร์ดเพื่อดู Serial output</div>
-    </div>
+<!-- ═══════════════ TOOLBOX ═══════════════ -->
+<xml id="toolbox" style="display:none">
+    <category name="⚙️ เริ่มต้น" colour="210">
+        <block type="arduino_setup"></block>
+        <block type="arduino_loop"></block>
+    </category>
 
-    <xml id="toolbox" style="display:none">
-        <category name="⚙️ พื้นฐาน" colour="210">
-            <block type="arduino_setup"></block>
-            <block type="arduino_loop"></block>
-        </category>
-        <category name="💡 GPIO" colour="230">
-            <block type="pin_mode"></block>
-            <block type="digital_write"></block>
-            <block type="digital_read"></block>
-            <block type="analog_write"></block>
-            <block type="analog_read"></block>
-        </category>
-        <category name="📡 Serial" colour="160">
-            <block type="serial_begin"></block>
-            <block type="serial_print">
-                <value name="TEXT"><block type="text"><field name="TEXT">Hello World</field></block></value>
-            </block>
-            <block type="serial_println">
-                <value name="TEXT"><block type="text"><field name="TEXT">Hello World</field></block></value>
-            </block>
-        </category>
-        <category name="⏱️ เวลา" colour="120">
-            <block type="base_delay_ms"></block>
-            <block type="base_delay_s"></block>
-            <block type="millis_block"></block>
-        </category>
-        <category name="🔁 ลูป" colour="120">
-            <block type="while_loop"></block>
-            <block type="controls_repeat_ext">
-                <value name="TIMES"><block type="math_number"><field name="NUM">10</field></block></value>
-            </block>
-        </category>
-        <category name="🔀 เงื่อนไข" colour="210">
-            <block type="controls_if"></block>
-            <block type="logic_compare"></block>
-            <block type="logic_operation"></block>
-            <block type="logic_negate"></block>
-        </category>
-        <category name="🔢 ตัวแปร" colour="330" custom="VARIABLE"></category>
-        <category name="➕ คณิตศาสตร์" colour="230">
-            <block type="math_number"></block>
-            <block type="math_arithmetic"></block>
-            <block type="math_modulo"></block>
-        </category>
-        <category name="📝 ข้อความ" colour="160">
-            <block type="text"></block>
-        </category>
-    </xml>
+    <category name="💡 ไฟ LED" colour="45">
+        <block type="led_builtin_on"></block>
+        <block type="led_builtin_off"></block>
+        <block type="led_builtin_toggle"></block>
+        <seperator></seperator>
+        <block type="digital_write"></block>
+        <block type="analog_write"></block>
+    </category>
 
-    <script>
-    // =============================================================
-    // 1. สร้าง Arduino Code Generator
-    // =============================================================
-    const Arduino = new Blockly.Generator('Arduino');
+    <category name="🔌 ขา I/O" colour="230">
+        <block type="pin_mode"></block>
+        <block type="digital_read"></block>
+        <block type="button_click_once"></block>
+        <block type="button_last_hold_ms"></block>
+        <block type="button_toggle_read"></block>
+        <block type="analog_read"></block>
+    </category>
 
-    Arduino.ORDER_ATOMIC     = 0;
-    Arduino.ORDER_UNARY      = 2;
-    Arduino.ORDER_MULTIPLY   = 3;
-    Arduino.ORDER_ADD        = 4;
-    Arduino.ORDER_RELATIONAL = 6;
-    Arduino.ORDER_EQUALITY   = 7;
-    Arduino.ORDER_AND        = 11;
-    Arduino.ORDER_OR         = 12;
-    Arduino.ORDER_NONE       = 99;
+    <category name="🎯 เซอร์โวมอเตอร์" colour="160">
+        <block type="servo_attach"></block>
+        <block type="servo_move"></block>
+        <block type="servo_button_click_hold"></block>
+    </category>
 
-    Arduino.scrub_ = function(block, code, opt_thisOnly) {
-        const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
-        if (nextBlock && !opt_thisOnly) return code + Arduino.blockToCode(nextBlock);
-        return code;
-    };
+    <category name="🔊 เสียง บัซเซอร์" colour="290">
+        <block type="buzzer_tone"></block>
+        <block type="buzzer_notone"></block>
+        <block type="buzzer_beep"></block>
+    </category>
 
-    Arduino.workspaceToCode = function(workspace) {
-        this.init(workspace);
-        Arduino.setups_ = Object.create(null);
-        let setupCode = '', loopCode = '', globalVars = '';
-        for (const block of workspace.getTopBlocks(true)) {
-            if (block.type === 'arduino_setup') setupCode += Arduino.statementToCode(block, 'DO');
-            else if (block.type === 'arduino_loop') loopCode += Arduino.statementToCode(block, 'DO');
+    <category name="🌡️ เซ็นเซอร์" colour="120">
+        <label text="─── อุณหภูมิ / ความชื้น DHT ───"></label>
+        <block type="dht_init"></block>
+        <block type="dht_temperature"></block>
+        <block type="dht_humidity"></block>
+        <label text="─── วัดระยะทาง Ultrasonic ───"></label>
+        <block type="ultrasonic_distance"></block>
+        <label text="─── เซ็นเซอร์อื่นๆ ───"></label>
+        <block type="pir_read"></block>
+        <block type="ldr_read"></block>
+        <block type="soil_moisture_read"></block>
+    </category>
+
+    <category name="🌈 NeoPixel RGB LED" colour="20">
+        <block type="neopixel_init"></block>
+        <block type="neopixel_set_color"></block>
+        <block type="neopixel_set_rgb"></block>
+        <block type="neopixel_clear"></block>
+        <block type="neopixel_show"></block>
+        <block type="neopixel_brightness"></block>
+    </category>
+
+    <category name="📟 จอ LCD" colour="260">
+        <label text="─── I2C LCD (บอร์ดต่อ SDA/SCL) ───"></label>
+        <block type="lcd_i2c_init">
+            <field name="NAME">lcd</field><field name="ADDR">0x27</field>
+            <field name="COLS">16</field><field name="ROWS">2</field>
+        </block>
+        <block type="lcd_clear"><field name="NAME">lcd</field></block>
+        <block type="lcd_set_cursor"><field name="NAME">lcd</field></block>
+        <block type="lcd_print">
+            <field name="NAME">lcd</field>
+            <value name="TEXT"><block type="text"><field name="TEXT">สวัสดี!</field></block></value>
+        </block>
+        <block type="lcd_print_val">
+            <field name="NAME">lcd</field>
+            <value name="VAL"><block type="math_number"><field name="NUM">0</field></block></value>
+        </block>
+        <block type="lcd_backlight"><field name="NAME">lcd</field><field name="STATE">ON</field></block>
+        <label text="─── Parallel LCD (ต่อ 6 ขา) ───"></label>
+        <block type="lcd_par_init"><field name="NAME">lcd2</field></block>
+    </category>
+
+    <category name="🎮 ปุ่มเสมือน" colour="160">
+        <block type="vbtn_read"></block>
+        <block type="vbtn_pressed"><field name="BTN">A</field></block>
+        <block type="vbtn_clear"></block>
+    </category>
+
+    <category name="📡 Serial" colour="160">
+        <block type="serial_begin"></block>
+        <block type="serial_print">
+            <value name="TEXT"><block type="text"><field name="TEXT">Hello World</field></block></value>
+        </block>
+        <block type="serial_println">
+            <value name="TEXT"><block type="text"><field name="TEXT">Hello World</field></block></value>
+        </block>
+        <block type="serial_read_line"></block>
+        <block type="serial_available"></block>
+    </category>
+
+    <category name="⏱️ เวลา" colour="120">
+        <block type="base_delay_ms"></block>
+        <block type="base_delay_s"></block>
+        <block type="millis_block"></block>
+    </category>
+
+    <category name="🔁 ลูป" colour="120">
+        <block type="while_loop"></block>
+        <block type="controls_repeat_ext">
+            <value name="TIMES"><block type="math_number"><field name="NUM">10</field></block></value>
+        </block>
+        <block type="controls_for">
+            <field name="VAR">i</field>
+            <value name="FROM"><block type="math_number"><field name="NUM">0</field></block></value>
+            <value name="TO"><block type="math_number"><field name="NUM">9</field></block></value>
+            <value name="BY"><block type="math_number"><field name="NUM">1</field></block></value>
+        </block>
+    </category>
+
+    <category name="🔀 เงื่อนไข" colour="210">
+        <block type="controls_if"></block>
+        <block type="logic_compare"></block>
+        <block type="logic_operation"></block>
+        <block type="logic_negate"></block>
+        <block type="logic_boolean"></block>
+    </category>
+
+    <category name="🔢 ตัวแปร" colour="330" custom="VARIABLE"></category>
+
+    <category name="🧮 ตัวแปรพื้นฐาน" colour="330">
+        <block type="var_int_init"></block>
+        <block type="var_set_value"></block>
+        <block type="var_change_by"></block>
+        <block type="var_compare_value"></block>
+    </category>
+
+    <category name="➕ คณิตศาสตร์" colour="230">
+        <block type="math_number"></block>
+        <block type="math_arithmetic"></block>
+        <block type="math_modulo"></block>
+        <block type="math_map_value">
+            <value name="X"><block type="math_number"><field name="NUM">0</field></block></value>
+            <value name="IN_MIN"><block type="math_number"><field name="NUM">0</field></block></value>
+            <value name="IN_MAX"><block type="math_number"><field name="NUM">1023</field></block></value>
+            <value name="OUT_MIN"><block type="math_number"><field name="NUM">0</field></block></value>
+            <value name="OUT_MAX"><block type="math_number"><field name="NUM">255</field></block></value>
+        </block>
+        <block type="math_constrain_value">
+            <value name="X"><block type="math_number"><field name="NUM">128</field></block></value>
+            <value name="LOW"><block type="math_number"><field name="NUM">0</field></block></value>
+            <value name="HIGH"><block type="math_number"><field name="NUM">255</field></block></value>
+        </block>
+        <block type="math_random_range">
+            <value name="LOW"><block type="math_number"><field name="NUM">0</field></block></value>
+            <value name="HIGH"><block type="math_number"><field name="NUM">100</field></block></value>
+        </block>
+        <block type="math_abs"></block>
+        <block type="math_sqrt"></block>
+        <sep gap="16"></sep>
+        <label text="―― เปรียบเทียบ ――"></label>
+        <block type="math_compare"><field name="OP">EQ</field></block>
+        <block type="math_compare"><field name="OP">NEQ</field></block>
+        <block type="math_compare"><field name="OP">GT</field></block>
+        <block type="math_compare"><field name="OP">GTE</field></block>
+        <block type="math_compare"><field name="OP">LT</field></block>
+        <block type="math_compare"><field name="OP">LTE</field></block>
+    </category>
+
+    <category name="📝 ข้อความ" colour="160">
+        <block type="text"></block>
+        <block type="text_join"></block>
+        <block type="text_length"></block>
+    </category>
+
+    <category name="🛠️ ฟังก์ชัน" colour="290" custom="PROCEDURE"></category>
+</xml>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// 1. Arduino Code Generator
+// ═══════════════════════════════════════════════════════
+const Arduino = new Blockly.Generator('Arduino');
+
+Arduino.ORDER_ATOMIC     = 0;
+Arduino.ORDER_UNARY      = 2;
+Arduino.ORDER_MULTIPLY   = 3;
+Arduino.ORDER_ADD        = 4;
+Arduino.ORDER_RELATIONAL = 6;
+Arduino.ORDER_EQUALITY   = 7;
+Arduino.ORDER_AND        = 11;
+Arduino.ORDER_OR         = 12;
+Arduino.ORDER_NONE       = 99;
+
+Arduino.scrub_ = function(block, code, opt_thisOnly) {
+    const next = block.nextConnection && block.nextConnection.targetBlock();
+    if (next && !opt_thisOnly) return code + Arduino.blockToCode(next);
+    return code;
+};
+
+Arduino.workspaceToCode = function(workspace) {
+    this.init(workspace);
+    let setupCode = '', loopCode = '';
+    let hasFloating = false;
+    for (const block of workspace.getTopBlocks(true)) {
+        if      (block.type === 'arduino_setup') setupCode += Arduino.statementToCode(block, 'DO');
+        else if (block.type === 'arduino_loop')  loopCode  += Arduino.statementToCode(block, 'DO');
+        else if (!block.isShadow()) hasFloating = true;
+    }
+    const floatWarn = hasFloating ? '// ⚠️ มีบล็อคลอยอยู่นอก Loop! → ลากใส่ใน 🔁 Loop\n' : '';
+
+    let globalVars = '', funcDefs = '', setupAuto = '';
+    for (const k in Arduino.definitions_) {
+        const v = Arduino.definitions_[k];
+        if (k.startsWith('func_')) funcDefs += v + '\n';
+        else globalVars += v + '\n';
+    }
+    // ลบ ser_begin จาก setups_ เพื่อป้องกัน Serial.begin ซ้ำ (เราจัดการเองข้างล่าง)
+    delete Arduino.setups_['ser_begin'];
+    for (const k in Arduino.setups_) setupAuto += Arduino.setups_[k] + '\n';
+
+    // ── รวม while(true) หลายก้อน → ก้อนเดียว ──────────────────
+    function mergeWhileLoops(code) {
+        const bodies = [];
+        const outside = [];
+        const lines = code.split('\n');
+        let inWhile = false, depth = 0, buf = [];
+        for (const line of lines) {
+            if (!inWhile && /^\s*while \(true\) \{/.test(line)) {
+                inWhile = true; depth = 1; buf = [];
+            } else if (inWhile) {
+                depth += (line.match(/\{/g)||[]).length - (line.match(/\}/g)||[]).length;
+                if (depth <= 0) { bodies.push(buf.join('\n')); buf = []; inWhile = false; }
+                else buf.push(line);
+            } else { outside.push(line); }
         }
-        for (const key in Arduino.definitions_) globalVars += Arduino.definitions_[key] + '\n';
-        let setupAutoCode = '';
-        for (const key in Arduino.setups_) setupAutoCode += Arduino.setups_[key] + '\n';
-        return `// Generated by Modulux ESP32-S3 IDE
-// Board: ESP32-S3 Wroom-1
-#include <Arduino.h>
-${globalVars}
-void setup() {
-${setupAutoCode}
-${setupCode || '  // ลาก "Setup" บล็อกมาวาง\n'}
+        if (bodies.length <= 1) return code;
+        const merged = bodies.map(b => b.trimEnd()).join('\n');
+        const outsideStr = outside.filter(l => l.trim()).join('\n');
+        return (outsideStr ? outsideStr + '\n' : '') + `  while (true) {\n${merged}\n  }\n`;
+    }
+    loopCode = mergeWhileLoops(loopCode);
+
+    // ── inject vbtn read ถ้ายังไม่มี ───────────────────────────
+    const needsVbtn = !!Arduino.definitions_['vbtn_var'];
+    if (needsVbtn && !loopCode.includes('Serial.available()')) {
+        // จับ indent ของ while(true) แล้ว inject ให้ตรง indent
+        loopCode = loopCode.replace(
+            /^([ \t]*)while \(true\) \{\n/m,
+            (m, ind) => `${ind}while (true) {\n${ind}  if(Serial.available()>0){ _vbtn=Serial.read(); }\n`
+        );
+        // inject _vbtn=0 ก่อน closing } ของ while(true) โดยใช้ indent เดียวกัน
+        loopCode = loopCode.replace(
+            /^([ \t]*)while \(true\) \{([\s\S]*)\n\1\}/m,
+            (m, ind, body) => `${ind}while (true) {${body}\n${ind}  _vbtn = 0;\n${ind}}`
+        );
+        if (!loopCode.includes('while (true)')) {
+            loopCode = '  if(Serial.available()>0){ _vbtn=Serial.read(); }\n' + loopCode + '  _vbtn = 0;\n';
+        }
+    }
+
+    const serialBegin =
+        '  Serial.begin(115200);\n' +
+        '  { unsigned long _t=millis(); while(!Serial && millis()-_t<3000){delay(10);} }\n' +
+        '  delay(150);\n';
+
+    // dedupe setupCode: ลบ Serial.begin, lcd.backlight ซ้ำ และ pinMode ที่ซ้อนทับ dht pin
+    setupCode = setupCode
+        .replace(/\s*Serial\.begin\(\d+\);?\n?/g, '')
+        .replace(/([ \t]*\w+\.backlight\(\);[ \t]*\n)/g, '');  // ลบออกทั้งหมด (มีใน setupAuto แล้ว)
+
+    return `// Generated by Modulux Coding IDE\n// Board: ${getBoardName()}\n${floatWarn}#include <Arduino.h>\n${globalVars}\n${funcDefs}\nvoid setup() {\n${serialBegin}${setupAuto}\n${setupCode || '  // ลาก "Setup" บล็อกมาใส่ที่นี่\n'}}\n\nvoid loop() {\n${loopCode || '  // ลาก "Loop" บล็อกมาใส่ที่นี่\n'}}`;
+};
+
+
+// ═══════════════════════════════════════════════════════
+// 2. Custom Blocks + Generators
+// ═══════════════════════════════════════════════════════
+
+// ── Setup / Loop ──────────────────────────────────────
+Blockly.Blocks['arduino_setup'] = {
+    init() {
+        this.appendDummyInput().appendField('⚙️ Setup (ทำครั้งเดียวตอนเปิด)');
+        this.appendStatementInput('DO').setCheck(null);
+        this.setColour(210); this.setTooltip('void setup()');
+    }
+};
+Arduino['arduino_setup'] = b => Arduino.statementToCode(b, 'DO');
+
+Blockly.Blocks['arduino_loop'] = {
+    init() {
+        this.appendDummyInput().appendField('🔁 Loop (วนซ้ำตลอดเวลา)');
+        this.appendStatementInput('DO').setCheck(null);
+        this.setColour(120); this.setTooltip('void loop()');
+    }
+};
+Arduino['arduino_loop'] = b => Arduino.statementToCode(b, 'DO');
+
+// ── Built-in LED ──────────────────────────────────────
+Blockly.Blocks['led_builtin_on'] = {
+    init() {
+        this.appendDummyInput().appendField('💡 เปิดไฟ LED ขา GPIO').appendField(new Blockly.FieldNumber(2,0,48),'PIN');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(45);
+    }
+};
+Arduino['led_builtin_on'] = b => {
+    const pin = b.getFieldValue('PIN');
+    Arduino.setups_[`led_out_${pin}`] = `  pinMode(${pin}, OUTPUT);`;
+    return `  digitalWrite(${pin}, HIGH);\n`;
+};
+
+Blockly.Blocks['led_builtin_off'] = {
+    init() {
+        this.appendDummyInput().appendField('🌑 ปิดไฟ LED ขา GPIO').appendField(new Blockly.FieldNumber(2,0,48),'PIN');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(45);
+    }
+};
+Arduino['led_builtin_off'] = b => {
+    const pin = b.getFieldValue('PIN');
+    Arduino.setups_[`led_out_${pin}`] = `  pinMode(${pin}, OUTPUT);`;
+    return `  digitalWrite(${pin}, LOW);\n`;
+};
+
+Blockly.Blocks['led_builtin_toggle'] = {
+    init() {
+        this.appendDummyInput().appendField('🔀 สลับไฟ LED ขา GPIO').appendField(new Blockly.FieldNumber(2,0,48),'PIN');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(45);
+    }
+};
+Arduino['led_builtin_toggle'] = b => {
+    const pin = b.getFieldValue('PIN');
+    Arduino.setups_[`led_out_${pin}`] = `  pinMode(${pin}, OUTPUT);`;
+    return `  digitalWrite(${pin}, !digitalRead(${pin}));\n`;
+};
+
+// ── GPIO ──────────────────────────────────────────────
+Blockly.Blocks['pin_mode'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('📌 ตั้งค่าขา GPIO').appendField(new Blockly.FieldNumber(2,0,48),'PIN')
+            .appendField('เป็น').appendField(new Blockly.FieldDropdown([['OUTPUT (ส่งออก)','OUTPUT'],['INPUT (รับเข้า)','INPUT'],['INPUT_PULLUP','INPUT_PULLUP']]),'MODE');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(230);
+    }
+};
+Arduino['pin_mode'] = b => `  pinMode(${b.getFieldValue('PIN')}, ${b.getFieldValue('MODE')});\n`;
+
+Blockly.Blocks['digital_write'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('💡 สั่งขา GPIO').appendField(new Blockly.FieldNumber(2,0,48),'PIN')
+            .appendField('ให้').appendField(new Blockly.FieldDropdown([['HIGH (เปิด/1)','HIGH'],['LOW (ปิด/0)','LOW']]),'STATE');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(45);
+    }
+};
+Arduino['digital_write'] = b => {
+    const pin = b.getFieldValue('PIN');
+    Arduino.setups_[`pm_${pin}`] = `  pinMode(${pin}, OUTPUT);`;
+    return `  digitalWrite(${pin}, ${b.getFieldValue('STATE')});\n`;
+};
+
+Blockly.Blocks['digital_read'] = {
+    init() {
+        this.appendDummyInput().appendField('🔍 อ่านสัญญาณขา GPIO').appendField(new Blockly.FieldNumber(2,0,48),'PIN');
+        this.setOutput(true,'Number'); this.setColour(230);
+    }
+};
+Arduino['digital_read'] = b => [`digitalRead(${b.getFieldValue('PIN')})`, Arduino.ORDER_ATOMIC];
+
+function ensureButtonEdgeHelpers(pin, db) {
+        const p = Number(pin);
+        const fnUpdate = `buttonEdgeUpdate_${p}`;
+        const fnClick = `buttonClickOnce_${p}`;
+        const fnHold = `buttonHoldMs_${p}`;
+    const fnPressed = `buttonPressed_${p}`;
+
+        Arduino.setups_[`btn_edge_pm_${p}`] = `  pinMode(${p}, INPUT_PULLUP);`;
+        Arduino.definitions_[`btn_edge_state_${p}`] =
+`struct ButtonEdgeState_${p} {
+    uint8_t lastRead = HIGH;
+    uint8_t stable = HIGH;
+    unsigned long lastDebounce = 0;
+    unsigned long pressStart = 0;
+    unsigned long lastHold = 0;
+    bool clicked = false;
+};
+ButtonEdgeState_${p} _btnEdge_${p};`;
+
+        Arduino.definitions_[`func_${fnUpdate}`] =
+`void ${fnUpdate}() {
+    uint8_t reading = digitalRead(${p});
+    if (reading != _btnEdge_${p}.lastRead) {
+        _btnEdge_${p}.lastDebounce = millis();
+        _btnEdge_${p}.lastRead = reading;
+    }
+    if ((millis() - _btnEdge_${p}.lastDebounce) > ${db}) {
+        if (reading != _btnEdge_${p}.stable) {
+            _btnEdge_${p}.stable = reading;
+            if (reading == LOW) {
+                _btnEdge_${p}.pressStart = millis();
+            } else {
+                _btnEdge_${p}.lastHold = millis() - _btnEdge_${p}.pressStart;
+                _btnEdge_${p}.clicked = true;  // fire once on release edge
+            }
+        }
+    }
+}`;
+
+        Arduino.definitions_[`func_${fnClick}`] =
+`bool ${fnClick}() {
+    ${fnUpdate}();
+    if (_btnEdge_${p}.clicked) {
+        _btnEdge_${p}.clicked = false;
+        return true;
+    }
+    return false;
+}`;
+
+        Arduino.definitions_[`func_${fnHold}`] =
+`unsigned long ${fnHold}() {
+    ${fnUpdate}();
+    if (_btnEdge_${p}.stable == LOW) {
+        return millis() - _btnEdge_${p}.pressStart;
+    }
+    return _btnEdge_${p}.lastHold;
+}`;
+
+        Arduino.definitions_[`func_${fnPressed}`] =
+`bool ${fnPressed}() {
+    ${fnUpdate}();
+    return _btnEdge_${p}.stable == LOW;
+}`;
+
+        return { fnClick, fnHold, fnPressed };
 }
 
-void loop() {
-${loopCode || '  // ลาก "Loop" บล็อกมาวาง\n'}
-}`;
-    };
-
-    // =============================================================
-    // 2. Custom Blocks + Arduino Generators
-    // =============================================================
-
-    // --- Setup / Loop ---
-    Blockly.Blocks['arduino_setup'] = {
-        init: function() {
-            this.appendDummyInput().appendField('⚙️ Setup (ทำครั้งเดียวตอนเปิด)');
-            this.appendStatementInput('DO').setCheck(null);
-            this.setColour(210);
-            this.setTooltip('void setup()');
+Blockly.Blocks['button_click_once'] = {
+        init() {
+                this.appendDummyInput()
+                        .appendField('🔘 ปุ่ม GPIO').appendField(new Blockly.FieldNumber(0,0,48),'PIN')
+                        .appendField('กดแล้วปล่อย (1 ครั้ง)');
+                this.appendDummyInput()
+                        .appendField('หน่วงกันเด้ง').appendField(new Blockly.FieldNumber(25,5,200),'DB').appendField('ms');
+                this.setTooltip('คืนค่า true แค่ 1 รอบ หลังปล่อยปุ่ม\nเหมาะกับ if เพื่อพิมพ์ "กด 1 ครั้ง"');
+                this.setOutput(true,'Boolean');
+                this.setColour(230);
         }
-    };
-    Arduino['arduino_setup'] = function(block) {
-        return Arduino.statementToCode(block, 'DO');
-    };
-
-    Blockly.Blocks['arduino_loop'] = {
-        init: function() {
-            this.appendDummyInput().appendField('🔁 Loop (วนซ้ำตลอด)');
-            this.appendStatementInput('DO').setCheck(null);
-            this.setColour(120);
-            this.setTooltip('void loop()');
-        }
-    };
-    Arduino['arduino_loop'] = function(block) {
-        return Arduino.statementToCode(block, 'DO');
-    };
-
-    // --- GPIO ---
-    Blockly.Blocks['pin_mode'] = {
-        init: function() {
-            this.appendDummyInput()
-                .appendField('📌 ตั้งค่าขา').appendField(new Blockly.FieldNumber(2, 0, 48), 'PIN')
-                .appendField('เป็น').appendField(new Blockly.FieldDropdown([['OUTPUT','OUTPUT'],['INPUT','INPUT'],['INPUT_PULLUP','INPUT_PULLUP']]), 'MODE');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(230);
-        }
-    };
-    Arduino['pin_mode'] = function(b) { return `  pinMode(${b.getFieldValue('PIN')}, ${b.getFieldValue('MODE')});\n`; };
-
-    Blockly.Blocks['digital_write'] = {
-        init: function() {
-            this.appendDummyInput()
-                .appendField('💡 สั่งขา').appendField(new Blockly.FieldNumber(2, 0, 48), 'PIN')
-                .appendField('ให้').appendField(new Blockly.FieldDropdown([['HIGH (เปิด)','HIGH'],['LOW (ปิด)','LOW']]), 'STATE');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(230);
-        }
-    };
-    Arduino['digital_write'] = function(b) {
+};
+Arduino['button_click_once'] = b => {
         const pin = b.getFieldValue('PIN');
-        Arduino.setups_[`pin_mode_out_${pin}`] = `  pinMode(${pin}, OUTPUT);`;
-        return `  digitalWrite(${pin}, ${b.getFieldValue('STATE')});\n`;
-    };
+        const db = b.getFieldValue('DB');
+        const fns = ensureButtonEdgeHelpers(pin, db);
+        return [`${fns.fnClick}()`, Arduino.ORDER_ATOMIC];
+};
 
-    Blockly.Blocks['digital_read'] = {
-        init: function() {
-            this.appendDummyInput().appendField('🔍 อ่านขา').appendField(new Blockly.FieldNumber(2, 0, 48), 'PIN');
-            this.setOutput(true, 'Number'); this.setColour(230);
+Blockly.Blocks['button_last_hold_ms'] = {
+        init() {
+                this.appendDummyInput()
+                        .appendField('⏱️ ปุ่ม GPIO').appendField(new Blockly.FieldNumber(0,0,48),'PIN')
+                        .appendField('เวลาค้างล่าสุด (ms)');
+                this.appendDummyInput()
+                        .appendField('หน่วงกันเด้ง').appendField(new Blockly.FieldNumber(25,5,200),'DB').appendField('ms');
+                this.setTooltip('ขณะกดค้างจะแสดงเวลาที่กำลังกด\nเมื่อปล่อยแล้วจะคงค่าระยะเวลาที่กดล่าสุด');
+                this.setOutput(true,'Number');
+                this.setColour(230);
+        }
+};
+Arduino['button_last_hold_ms'] = b => {
+        const pin = b.getFieldValue('PIN');
+        const db = b.getFieldValue('DB');
+        const fns = ensureButtonEdgeHelpers(pin, db);
+        return [`(long)${fns.fnHold}()`, Arduino.ORDER_ATOMIC];
+};
+
+Blockly.Blocks['button_toggle_read'] = {
+        init() {
+                this.appendDummyInput()
+                        .appendField('🔘 สถานะ Toggle ปุ่ม GPIO')
+                        .appendField(new Blockly.FieldNumber(0,0,48),'PIN');
+                this.appendDummyInput()
+                        .appendField('หน่วงกันเด้ง')
+                        .appendField(new Blockly.FieldNumber(25,5,200),'DB')
+                        .appendField('ms');
+                this.setTooltip('ต่อปุ่มแบบ INPUT_PULLUP (ปุ่มกดลง GND)\nกด 1 ครั้ง = สลับ ON/OFF\nบล็อกนี้ควรอ่านใน Loop');
+                this.setOutput(true,'Boolean');
+                this.setColour(230);
+        }
+};
+Arduino['button_toggle_read'] = b => {
+        const pin = b.getFieldValue('PIN');
+        const db = b.getFieldValue('DB');
+        const fn = `buttonToggle_${pin}`;
+        Arduino.setups_[`btn_tg_pm_${pin}`] = `  pinMode(${pin}, INPUT_PULLUP);`;
+        Arduino.definitions_[`func_${fn}`] =
+`bool ${fn}() {
+    static uint8_t lastRead = HIGH;
+    static uint8_t lastStable = HIGH;
+    static unsigned long lastDebounce = 0;
+    static bool toggled = false;
+
+    uint8_t reading = digitalRead(${pin});
+    if (reading != lastRead) {
+        lastDebounce = millis();
+        lastRead = reading;
+    }
+    if ((millis() - lastDebounce) > ${db}) {
+        if (reading != lastStable) {
+            lastStable = reading;
+            if (lastStable == LOW) toggled = !toggled;  // toggle on button press edge
+        }
+    }
+    return toggled;
+}`;
+        return [`${fn}()`, Arduino.ORDER_ATOMIC];
+};
+
+Blockly.Blocks['analog_write'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🎚️ PWM ขา GPIO').appendField(new Blockly.FieldNumber(2,0,48),'PIN')
+            .appendField('ค่า').appendField(new Blockly.FieldNumber(128,0,255),'VAL');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(45);
+    }
+};
+Arduino['analog_write'] = b => `  analogWrite(${b.getFieldValue('PIN')}, ${b.getFieldValue('VAL')});\n`;
+
+Blockly.Blocks['analog_read'] = {
+    init() {
+        this.appendDummyInput().appendField('📊 อ่านค่า Analog ขา GPIO').appendField(new Blockly.FieldNumber(1,0,48),'PIN');
+        this.setOutput(true,'Number'); this.setColour(230);
+    }
+};
+Arduino['analog_read'] = b => [`analogRead(${b.getFieldValue('PIN')})`, Arduino.ORDER_ATOMIC];
+
+// ── Servo ─────────────────────────────────────────────
+Blockly.Blocks['servo_attach'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🎯 เชื่อมต่อเซอร์โว ชื่อ').appendField(new Blockly.FieldTextInput('myServo'),'NAME')
+            .appendField('รุ่น').appendField(new Blockly.FieldDropdown([
+                ['SG90','SG90'],
+                ['MG90S','MG90S'],
+                ['MG996R','MG996R'],
+                ['ทั่วไป','GENERIC']
+            ]),'MODEL')
+            .appendField('ที่ขา GPIO').appendField(new Blockly.FieldNumber(18,0,48),'PIN');
+        this.setTooltip('⚠️ ESP32-S3: ใช้ GPIO 18,19,20,21 ปลอดภัยที่สุด — หลีกเลี่ยง 16,17 (PSRAM/Flash)\nSG90/MG90S: 500–2400µs | MG996R: 500–2500µs');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160);
+    }
+};
+Arduino['servo_attach'] = b => {
+    const name  = b.getFieldValue('NAME');
+    const pin   = b.getFieldValue('PIN');
+    const model = b.getFieldValue('MODEL');
+    const pulseMap = { SG90:[500,2400], MG90S:[500,2400], MG996R:[500,2500], GENERIC:[544,2400] };
+    const [pMin, pMax] = pulseMap[model] || [500,2400];
+    const unsafePins = [6,7,8,9,10,11,12,13,14,15,16,17];
+    const pinWarn = unsafePins.includes(Number(pin))
+        ? `  // ⚠️ GPIO ${pin} อาจไม่ทำงานบน ESP32-S3 (PSRAM/SPI Flash) → ลองเปลี่ยนเป็น 18 หรือ 21\n`
+        : '';
+    Arduino.definitions_['servo_inc'] = '#include <ESP32Servo.h>';
+    Arduino.definitions_[`servo_obj_${name}`] = `Servo ${name};`;
+    // ESP32Servo ต้องจัดสรร PWM timer ก่อนใช้งาน (เพียงครั้งเดียว)
+    Arduino.setups_['esp32pwm_alloc'] =
+        '  ESP32PWM::allocateTimer(0);\n' +
+        '  ESP32PWM::allocateTimer(1);\n' +
+        '  ESP32PWM::allocateTimer(2);\n' +
+        '  ESP32PWM::allocateTimer(3);';
+    Arduino.setups_[`servo_att_${name}`] =
+        `${pinWarn}  ${name}.setPeriodHertz(50);\n` +
+        `  ${name}.attach(${pin}, ${pMin}, ${pMax});  // ${model}\n` +
+        `  delay(200);  // รอให้ servo พร้อม\n` +
+        `  ${name}.write(90);  // เซ็ตตำแหน่งเริ่มต้น\n` +
+        `  delay(500);`;
+    return '';
+};
+
+Blockly.Blocks['servo_move'] = {
+    init() {
+        this.appendValueInput('ANGLE').setCheck('Number')
+            .appendField('🎯 หมุนเซอร์โว').appendField(new Blockly.FieldTextInput('myServo'),'NAME').appendField('ไปที่');
+        this.appendDummyInput().appendField('องศา (0–180)');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160);
+    }
+};
+Arduino['servo_move'] = b => {
+    const name  = b.getFieldValue('NAME');
+    const angle = Arduino.valueToCode(b,'ANGLE',Arduino.ORDER_NONE) || '90';
+    return `  ${name}.write(${angle});\n`;
+};
+
+Blockly.Blocks['servo_button_click_hold'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🎮 ปุ่ม GPIO').appendField(new Blockly.FieldNumber(0,0,48),'PIN')
+            .appendField('ควบคุมเซอร์โว').appendField(new Blockly.FieldTextInput('myServo'),'NAME');
+        this.appendDummyInput()
+            .appendField('กดแล้วปล่อย 1 ครั้ง → ไปที่').appendField(new Blockly.FieldNumber(90,0,180,1),'CLICK_ANGLE').appendField('องศา');
+        this.appendDummyInput()
+            .appendField('กดค้าง >').appendField(new Blockly.FieldNumber(300,50,3000,10),'HOLD_MS').appendField('ms')
+            .appendField('ให้วิ่ง').appendField(new Blockly.FieldDropdown([
+                ['เพิ่มองศา (+)','INC'],
+                ['ลดองศา (-)','DEC']
+            ]),'DIR');
+        this.appendDummyInput()
+            .appendField('โหมดความเร็ว').appendField(new Blockly.FieldDropdown([
+                ['เต็มสปีด','FULL'],
+                ['ปรับเอง','CUSTOM']
+            ]),'SPD_MODE')
+            .appendField('สปีด').appendField(new Blockly.FieldNumber(180,1,720,1),'SPD').appendField('deg/s');
+        this.appendDummyInput()
+            .appendField('หน่วงกันเด้ง').appendField(new Blockly.FieldNumber(25,5,200,1),'DB').appendField('ms');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+        this.setColour(160);
+        this.setTooltip('ใช้คู่กับบล็อก "เชื่อมต่อเซอร์โว"\nคลิกสั้น: ไปองศาที่กำหนด\nกดค้าง: วิ่งต่อเนื่องตามสปีด');
+    }
+};
+Arduino['servo_button_click_hold'] = b => {
+    const pin = Number(b.getFieldValue('PIN'));
+    const name = b.getFieldValue('NAME');
+    const clickAngle = Number(b.getFieldValue('CLICK_ANGLE'));
+    const holdMs = Number(b.getFieldValue('HOLD_MS'));
+    const dir = b.getFieldValue('DIR') === 'DEC' ? -1 : 1;
+    const spdMode = b.getFieldValue('SPD_MODE');
+    const speedDegPerSec = spdMode === 'FULL' ? 720 : Number(b.getFieldValue('SPD'));
+    const db = Number(b.getFieldValue('DB'));
+    const fns = ensureButtonEdgeHelpers(pin, db);
+    const stateKey = `servo_btn_last_ms_${name}_${pin}`.replace(/[^A-Za-z0-9_]/g, '_');
+
+    Arduino.definitions_[`var_${stateKey}`] = `unsigned long ${stateKey} = 0;`;
+
+    return (
+`  {
+    unsigned long _now = millis();
+    if (${stateKey} == 0) ${stateKey} = _now;
+    float _dt = (_now - ${stateKey}) / 1000.0f;
+    ${stateKey} = _now;
+
+    if (${fns.fnClick}()) {
+      ${name}.write(constrain(${clickAngle}, 0, 180));
+    }
+
+    if (${fns.fnPressed}() && ${fns.fnHold}() >= ${holdMs}) {
+      int _next = (int)${name}.read() + (int)(${dir} * ${speedDegPerSec} * _dt);
+      _next = constrain(_next, 0, 180);
+      ${name}.write(_next);
+    }
+  }
+`);
+};
+
+// ── Buzzer / Tone ─────────────────────────────────────
+Blockly.Blocks['buzzer_tone'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🔊 บัซเซอร์เปิด ขา GPIO').appendField(new Blockly.FieldNumber(5,0,48),'PIN')
+            .appendField('ความถี่').appendField(new Blockly.FieldNumber(1000,20,20000),'FREQ').appendField('Hz');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(290);
+    }
+};
+Arduino['buzzer_tone'] = b => `  tone(${b.getFieldValue('PIN')}, ${b.getFieldValue('FREQ')});\n`;
+
+Blockly.Blocks['buzzer_notone'] = {
+    init() {
+        this.appendDummyInput().appendField('🔇 บัซเซอร์ปิด ขา GPIO').appendField(new Blockly.FieldNumber(5,0,48),'PIN');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(290);
+    }
+};
+Arduino['buzzer_notone'] = b => `  noTone(${b.getFieldValue('PIN')});\n`;
+
+Blockly.Blocks['buzzer_beep'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('📢 บีปสั้น ขา GPIO').appendField(new Blockly.FieldNumber(5,0,48),'PIN')
+            .appendField('ความถี่').appendField(new Blockly.FieldNumber(1000,20,20000),'FREQ').appendField('Hz')
+            .appendField('นาน').appendField(new Blockly.FieldNumber(200,1,10000),'DUR').appendField('ms');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(290);
+    }
+};
+Arduino['buzzer_beep'] = b => `  tone(${b.getFieldValue('PIN')}, ${b.getFieldValue('FREQ')}, ${b.getFieldValue('DUR')});\n`;
+
+// ── DHT Sensor ────────────────────────────────────────
+Blockly.Blocks['dht_init'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🌡️ ตั้งค่า DHT').appendField(new Blockly.FieldDropdown([
+                ['DHT11','DHT11'],
+                ['DHT22','DHT22'],
+                ['AM2302 (=DHT22)','DHT22'],
+                ['AM2301 (=DHT21)','DHT21'],
+                ['DHT21','DHT21']
+            ]),'TYPE')
+            .appendField('ชื่อ').appendField(new Blockly.FieldTextInput('dht'),'NAME')
+            .appendField('ขา GPIO').appendField(new Blockly.FieldNumber(4,0,48),'PIN');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120);
+    }
+};
+Arduino['dht_init'] = b => {
+    const name = b.getFieldValue('NAME'), pin = b.getFieldValue('PIN'), type = b.getFieldValue('TYPE');
+    Arduino.definitions_['dht_inc'] = '#include <DHT.h>';
+    Arduino.definitions_[`dht_obj_${name}`] = `DHT ${name}(${pin}, ${type});`;
+    Arduino.setups_[`dht_begin_${name}`] = `  ${name}.begin();`;
+    return '';
+};
+
+Blockly.Blocks['dht_temperature'] = {
+    init() {
+        this.appendDummyInput().appendField('🌡️ อุณหภูมิ (°C) จาก').appendField(new Blockly.FieldTextInput('dht'),'NAME');
+        this.setOutput(true,'Number'); this.setColour(120);
+    }
+};
+Arduino['dht_temperature'] = b => [`${b.getFieldValue('NAME')}.readTemperature()`, Arduino.ORDER_ATOMIC];
+
+Blockly.Blocks['dht_humidity'] = {
+    init() {
+        this.appendDummyInput().appendField('💧 ความชื้น (%) จาก').appendField(new Blockly.FieldTextInput('dht'),'NAME');
+        this.setOutput(true,'Number'); this.setColour(120);
+    }
+};
+Arduino['dht_humidity'] = b => [`${b.getFieldValue('NAME')}.readHumidity()`, Arduino.ORDER_ATOMIC];
+
+// ── Ultrasonic HC-SR04 ────────────────────────────────
+Blockly.Blocks['ultrasonic_distance'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('📡 ระยะทาง (cm) Trig:GPIO').appendField(new Blockly.FieldNumber(12,0,48),'TRIG')
+            .appendField('Echo:GPIO').appendField(new Blockly.FieldNumber(14,0,48),'ECHO');
+        this.setOutput(true,'Number'); this.setColour(120);
+    }
+};
+Arduino['ultrasonic_distance'] = b => {
+    const trig = b.getFieldValue('TRIG'), echo = b.getFieldValue('ECHO');
+    Arduino.setups_[`us_pin_${trig}`] = `  pinMode(${trig}, OUTPUT);\n  pinMode(${echo}, INPUT);`;
+    const fn = `ultrasonicCm_${trig}_${echo}`;
+    Arduino.definitions_[`func_${fn}`] =
+        `float ${fn}() {\n  digitalWrite(${trig}, LOW); delayMicroseconds(2);\n  digitalWrite(${trig}, HIGH); delayMicroseconds(10);\n  digitalWrite(${trig}, LOW);\n  long d = pulseIn(${echo}, HIGH, 30000);\n  return d * 0.0343f / 2.0f;\n}`;
+    return [`${fn}()`, Arduino.ORDER_ATOMIC];
+};
+
+// ── PIR Sensor ────────────────────────────────────────
+Blockly.Blocks['pir_read'] = {
+    init() {
+        this.appendDummyInput().appendField('🚶 ตรวจจับการเคลื่อนไหว PIR ขา GPIO').appendField(new Blockly.FieldNumber(5,0,48),'PIN');
+        this.setOutput(true,'Boolean'); this.setColour(120);
+    }
+};
+Arduino['pir_read'] = b => {
+    const pin = b.getFieldValue('PIN');
+    Arduino.setups_[`pir_pm_${pin}`] = `  pinMode(${pin}, INPUT);`;
+    return [`digitalRead(${pin})`, Arduino.ORDER_ATOMIC];
+};
+
+// ── LDR ──────────────────────────────────────────────
+Blockly.Blocks['ldr_read'] = {
+    init() {
+        this.appendDummyInput().appendField('☀️ ความสว่าง LDR ขา GPIO').appendField(new Blockly.FieldNumber(36,0,48),'PIN');
+        this.setOutput(true,'Number'); this.setColour(120);
+    }
+};
+Arduino['ldr_read'] = b => [`analogRead(${b.getFieldValue('PIN')})`, Arduino.ORDER_ATOMIC];
+
+// ── Soil Moisture ─────────────────────────────────────
+Blockly.Blocks['soil_moisture_read'] = {
+    init() {
+        this.appendDummyInput().appendField('🌱 ความชื้นดิน ขา GPIO').appendField(new Blockly.FieldNumber(34,0,48),'PIN');
+        this.setOutput(true,'Number'); this.setColour(120);
+    }
+};
+Arduino['soil_moisture_read'] = b => [`analogRead(${b.getFieldValue('PIN')})`, Arduino.ORDER_ATOMIC];
+
+// ── NeoPixel ──────────────────────────────────────────
+Blockly.Blocks['neopixel_init'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🌈 ตั้งค่า NeoPixel ชื่อ').appendField(new Blockly.FieldTextInput('strip'),'NAME')
+            .appendField('จำนวน').appendField(new Blockly.FieldNumber(8,1,300),'COUNT').appendField('ดวง')
+            .appendField('ขา GPIO').appendField(new Blockly.FieldNumber(15,0,48),'PIN');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
+    }
+};
+Arduino['neopixel_init'] = b => {
+    const name = b.getFieldValue('NAME'), count = b.getFieldValue('COUNT'), pin = b.getFieldValue('PIN');
+    Arduino.definitions_['neo_inc'] = '#include <Adafruit_NeoPixel.h>';
+    Arduino.definitions_[`neo_${name}`] = `Adafruit_NeoPixel ${name}(${count}, ${pin}, NEO_GRB + NEO_KHZ800);`;
+    Arduino.setups_[`neo_begin_${name}`] = `  ${name}.begin();\n  ${name}.show();`;
+    return '';
+};
+
+Blockly.Blocks['neopixel_set_color'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🌈').appendField(new Blockly.FieldTextInput('strip'),'NAME')
+            .appendField('LED ดวงที่').appendField(new Blockly.FieldNumber(0,0,299),'N')
+            .appendField('สี').appendField(new Blockly.FieldDropdown([
+                ['แดง 🔴','255,0,0'],['เขียว 🟢','0,255,0'],['น้ำเงิน 🔵','0,0,255'],
+                ['เหลือง 🟡','255,255,0'],['ม่วง 🟣','128,0,128'],['ฟ้า 🩵','0,255,255'],
+                ['ส้ม 🟠','255,128,0'],['ขาว ⚪','255,255,255'],['ดับ ⚫','0,0,0']
+            ]),'COLOR');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
+    }
+};
+Arduino['neopixel_set_color'] = b => {
+    const name = b.getFieldValue('NAME');
+    return `  ${name}.setPixelColor(${b.getFieldValue('N')}, ${name}.Color(${b.getFieldValue('COLOR')}));\n`;
+};
+
+Blockly.Blocks['neopixel_set_rgb'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🌈').appendField(new Blockly.FieldTextInput('strip'),'NAME')
+            .appendField('LED ดวงที่').appendField(new Blockly.FieldNumber(0,0,299),'N')
+            .appendField('R').appendField(new Blockly.FieldNumber(255,0,255),'R')
+            .appendField('G').appendField(new Blockly.FieldNumber(0,0,255),'G')
+            .appendField('B').appendField(new Blockly.FieldNumber(0,0,255),'B');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
+    }
+};
+Arduino['neopixel_set_rgb'] = b => {
+    const name = b.getFieldValue('NAME');
+    return `  ${name}.setPixelColor(${b.getFieldValue('N')}, ${name}.Color(${b.getFieldValue('R')},${b.getFieldValue('G')},${b.getFieldValue('B')}));\n`;
+};
+
+Blockly.Blocks['neopixel_clear'] = {
+    init() {
+        this.appendDummyInput().appendField('⚫ ดับ NeoPixel ทั้งหมด').appendField(new Blockly.FieldTextInput('strip'),'NAME');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
+    }
+};
+Arduino['neopixel_clear'] = b => `  ${b.getFieldValue('NAME')}.clear();\n`;
+
+Blockly.Blocks['neopixel_show'] = {
+    init() {
+        this.appendDummyInput().appendField('✨ แสดงสี NeoPixel').appendField(new Blockly.FieldTextInput('strip'),'NAME');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
+    }
+};
+Arduino['neopixel_show'] = b => `  ${b.getFieldValue('NAME')}.show();\n`;
+
+Blockly.Blocks['neopixel_brightness'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('💫 ความสว่าง').appendField(new Blockly.FieldTextInput('strip'),'NAME')
+            .appendField('ค่า').appendField(new Blockly.FieldNumber(50,0,255),'BRIGHT');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
+    }
+};
+Arduino['neopixel_brightness'] = b => `  ${b.getFieldValue('NAME')}.setBrightness(${b.getFieldValue('BRIGHT')});\n`;
+
+// ── LCD Display ───────────────────────────────────────
+// I2C LCD init  (ใช้ library: LiquidCrystal_I2C)
+Blockly.Blocks['lcd_i2c_init'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('📟 ตั้งค่า LCD I2C ชื่อ').appendField(new Blockly.FieldTextInput('lcd'),'NAME');
+        this.appendDummyInput()
+            .appendField('I2C Address').appendField(new Blockly.FieldDropdown([
+                ['0x27 (ทั่วไป)','0x27'],
+                ['0x3F','0x3F'],
+                ['0x20','0x20']
+            ]),'ADDR')
+            .appendField('ขนาด').appendField(new Blockly.FieldDropdown([
+                ['16x2','16,2'],
+                ['20x4','20,4'],
+                ['16x4','16,4'],
+                ['8x2','8,2']
+            ]),'SIZE');
+        this.appendDummyInput()
+            .appendField('SDA GPIO').appendField(new Blockly.FieldNumber(8,0,48),'SDA')
+            .appendField('SCL GPIO').appendField(new Blockly.FieldNumber(9,0,48),'SCL');
+        this.setTooltip('ESP32-S3: SDA=8, SCL=9 (default) — ต่อ SDA/SCL และปรับ contrast ด้วยปุ่มสีน้ำเงินบน module\nห้ามใช้ GPIO 16,17 (PSRAM)');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+    }
+};
+Arduino['lcd_i2c_init'] = b => {
+    const name = b.getFieldValue('NAME');
+    const addr = b.getFieldValue('ADDR');
+    const [cols, rows] = b.getFieldValue('SIZE').split(',');
+    const sda = b.getFieldValue('SDA');
+    const scl = b.getFieldValue('SCL');
+    Arduino.definitions_['lcd_inc'] = '#include <LiquidCrystal_I2C.h>';
+    Arduino.definitions_['wire_inc'] = '#include <Wire.h>';
+    Arduino.definitions_[`lcd_obj_${name}`] = `LiquidCrystal_I2C ${name}(${addr}, ${cols}, ${rows});`;
+    Arduino.setups_[`lcd_wire_${name}`] = `  Wire.begin(${sda}, ${scl});`;
+    Arduino.setups_[`lcd_init_${name}`] =
+        `  ${name}.init();\n  ${name}.backlight();\n  ${name}.clear();`;
+    return '';
+};
+
+// Parallel LCD init (ใช้ library: LiquidCrystal)
+Blockly.Blocks['lcd_par_init'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('📟 ตั้งค่า LCD Parallel ชื่อ').appendField(new Blockly.FieldTextInput('lcd2'),'NAME');
+        this.appendDummyInput()
+            .appendField('RS').appendField(new Blockly.FieldNumber(12,0,48),'RS')
+            .appendField('EN').appendField(new Blockly.FieldNumber(11,0,48),'EN');
+        this.appendDummyInput()
+            .appendField('D4').appendField(new Blockly.FieldNumber(5,0,48),'D4')
+            .appendField('D5').appendField(new Blockly.FieldNumber(4,0,48),'D5')
+            .appendField('D6').appendField(new Blockly.FieldNumber(3,0,48),'D6')
+            .appendField('D7').appendField(new Blockly.FieldNumber(2,0,48),'D7');
+        this.appendDummyInput()
+            .appendField('ขนาด').appendField(new Blockly.FieldDropdown([
+                ['16x2','16,2'],['20x4','20,4'],['16x4','16,4']
+            ]),'SIZE');
+        this.setTooltip('LCD ต่อตรง 6 ขา (RS, EN, D4-D7) — ไม่ต้องใช้ I2C backpack');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+    }
+};
+Arduino['lcd_par_init'] = b => {
+    const name = b.getFieldValue('NAME');
+    const rs=b.getFieldValue('RS'), en=b.getFieldValue('EN');
+    const d4=b.getFieldValue('D4'), d5=b.getFieldValue('D5');
+    const d6=b.getFieldValue('D6'), d7=b.getFieldValue('D7');
+    const [cols, rows] = b.getFieldValue('SIZE').split(',');
+    Arduino.definitions_['lcd_par_inc'] = '#include <LiquidCrystal.h>';
+    Arduino.definitions_[`lcd_obj_${name}`] = `LiquidCrystal ${name}(${rs}, ${en}, ${d4}, ${d5}, ${d6}, ${d7});`;
+    Arduino.setups_[`lcd_init_${name}`] = `  ${name}.begin(${cols}, ${rows});\n  ${name}.clear();`;
+    return '';
+};
+
+// LCD clear
+Blockly.Blocks['lcd_clear'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🗑️ ล้างหน้าจอ LCD').appendField(new Blockly.FieldTextInput('lcd'),'NAME');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+    }
+};
+Arduino['lcd_clear'] = b => `  ${b.getFieldValue('NAME')}.clear();\n`;
+
+// LCD setCursor
+Blockly.Blocks['lcd_set_cursor'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('📍 ตำแหน่ง LCD').appendField(new Blockly.FieldTextInput('lcd'),'NAME')
+            .appendField('คอลัมน์').appendField(new Blockly.FieldNumber(0,0,19),'COL')
+            .appendField('แถว').appendField(new Blockly.FieldNumber(0,0,3),'ROW');
+        this.setTooltip('คอลัมน์และแถวเริ่มต้นที่ 0  (16x2: คอลัมน์ 0-15, แถว 0-1)');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+    }
+};
+Arduino['lcd_set_cursor'] = b =>
+    `  ${b.getFieldValue('NAME')}.setCursor(${b.getFieldValue('COL')}, ${b.getFieldValue('ROW')});\n`;
+
+// LCD print text
+Blockly.Blocks['lcd_print'] = {
+    init() {
+        this.appendValueInput('TEXT').setCheck(['String','Number','Boolean'])
+            .appendField('📝 พิมพ์ LCD').appendField(new Blockly.FieldTextInput('lcd'),'NAME');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+    }
+};
+Arduino['lcd_print'] = b => {
+    const txt = Arduino.valueToCode(b,'TEXT',Arduino.ORDER_NONE) || '""';
+    return `  ${b.getFieldValue('NAME')}.print(${txt});\n`;
+};
+
+// LCD print number/value
+Blockly.Blocks['lcd_print_val'] = {
+    init() {
+        this.appendValueInput('VAL').setCheck('Number')
+            .appendField('🔢 พิมพ์ตัวเลข LCD').appendField(new Blockly.FieldTextInput('lcd'),'NAME');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+    }
+};
+Arduino['lcd_print_val'] = b => {
+    const val = Arduino.valueToCode(b,'VAL',Arduino.ORDER_NONE) || '0';
+    return `  ${b.getFieldValue('NAME')}.print(${val});\n`;
+};
+
+// LCD backlight
+Blockly.Blocks['lcd_backlight'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('💡 ไฟหลัง LCD').appendField(new Blockly.FieldTextInput('lcd'),'NAME')
+            .appendField(new Blockly.FieldDropdown([['เปิด','ON'],['ปิด','OFF']]),'STATE');
+        this.setTooltip('ใช้ได้เฉพาะ I2C LCD');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+    }
+};
+Arduino['lcd_backlight'] = b =>
+    b.getFieldValue('STATE') === 'ON'
+        ? `  ${b.getFieldValue('NAME')}.backlight();\n`
+        : `  ${b.getFieldValue('NAME')}.noBacklight();\n`;
+
+// ── Serial ────────────────────────────────────────────
+Blockly.Blocks['serial_begin'] = {
+    init() {
+        this.appendDummyInput().appendField('📡 เริ่ม Serial ความเร็ว').appendField(new Blockly.FieldDropdown([['115200','115200'],['9600','9600'],['57600','57600'],['38400','38400']]),'BAUD').appendField('baud');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160);
+    }
+};
+Arduino['serial_begin'] = b => {
+    const baud = b.getFieldValue('BAUD');
+    Arduino.setups_[`ser_begin`] = `  Serial.begin(${baud});`;
+    return '';
+};
+
+Blockly.Blocks['serial_print'] = {
+    init() {
+        this.appendValueInput('TEXT').setCheck(null).appendField('🖨️ Serial.print');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160);
+    }
+};
+Arduino['serial_print'] = b => {
+    Arduino.setups_['ser_begin'] = '  Serial.begin(115200);';
+    return `  Serial.print(${Arduino.valueToCode(b,'TEXT',Arduino.ORDER_NONE)||'"Hello World"'});\n`;
+};
+
+Blockly.Blocks['serial_println'] = {
+    init() {
+        this.appendValueInput('TEXT').setCheck(null).appendField('🖨️ Serial.println (ขึ้นบรรทัดใหม่)');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160);
+    }
+};
+Arduino['serial_println'] = b => {
+    Arduino.setups_['ser_begin'] = '  Serial.begin(115200);';
+    return `  Serial.println(${Arduino.valueToCode(b,'TEXT',Arduino.ORDER_NONE)||'"Hello World"'});\n`;
+};
+
+Blockly.Blocks['serial_read_line'] = {
+    init() {
+        this.appendDummyInput().appendField('📥 อ่านข้อความจาก Serial (readStringUntil)');
+        this.setOutput(true,'String'); this.setColour(160);
+    }
+};
+Arduino['serial_read_line'] = () => {
+    Arduino.setups_['ser_begin'] = '  Serial.begin(115200);';
+    return ['Serial.readStringUntil(\'\\n\')', Arduino.ORDER_ATOMIC];
+};
+
+Blockly.Blocks['serial_available'] = {
+    init() {
+        this.appendDummyInput().appendField('📬 มีข้อมูลใน Serial หรือไม่');
+        this.setOutput(true,'Number'); this.setColour(160);
+    }
+};
+Arduino['serial_available'] = () => ['Serial.available()', Arduino.ORDER_ATOMIC];
+
+// ── Virtual Button ──────────────────────────────────────
+(function(){
+    const BTN_OPTS = [
+        ['A','A'],['B','B'],['C','C'],['D','D'],
+        ['▲ ขึ้น','U'],['▼ ลง','W'],['◀ ซ้าย','L'],['▶ ขวา','R'],['● กลาง','X']
+    ];
+    Blockly.Blocks['vbtn_read'] = {
+        init(){
+            this.appendDummyInput().appendField('🎮 อ่านปุ่มเสมือน (ต้นลูป)');
+            this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(30);
+            this.setTooltip('วางบล็อคนี้ไว้บนสุดใน Loop เพื่ออ่านคำสั่งจาก Virtual Controller');
         }
     };
-    Arduino['digital_read'] = function(b) { return [`digitalRead(${b.getFieldValue('PIN')})`, Arduino.ORDER_ATOMIC]; };
+    Arduino['vbtn_read'] = b => {
+        Arduino.definitions_['vbtn_var'] = 'char _vbtn = 0;';
+        Arduino.setups_['ser_begin'] = '  Serial.begin(115200);';
+        return '  if(Serial.available()>0){ _vbtn=Serial.read(); }\n';
+    };
 
-    Blockly.Blocks['analog_write'] = {
-        init: function() {
+    Blockly.Blocks['vbtn_pressed'] = {
+        init(){
             this.appendDummyInput()
-                .appendField('🎚️ PWM ขา').appendField(new Blockly.FieldNumber(2, 0, 48), 'PIN')
-                .appendField('ค่า').appendField(new Blockly.FieldNumber(128, 0, 255), 'VAL');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(230);
+                .appendField('🎮 ปุ่มเสมือน')
+                .appendField(new Blockly.FieldDropdown(BTN_OPTS),'BTN')
+                .appendField('ถูกกด');
+            this.setOutput(true,'Boolean'); this.setColour(30);
+            this.setTooltip('คืนค่า true เมื่อปุ่มที่เลือกถูกกดจาก Virtual Controller');
         }
     };
-    Arduino['analog_write'] = function(b) { return `  analogWrite(${b.getFieldValue('PIN')}, ${b.getFieldValue('VAL')});\n`; };
+    Arduino['vbtn_pressed'] = b => {
+        Arduino.definitions_['vbtn_var'] = 'char _vbtn = 0;';
+        const btn = b.getFieldValue('BTN');
+        return [`(_vbtn == '${btn}')`, Arduino.ORDER_RELATIONAL];
+    };
 
-    Blockly.Blocks['analog_read'] = {
-        init: function() {
-            this.appendDummyInput().appendField('📊 อ่านค่า Analog ขา').appendField(new Blockly.FieldNumber(1, 0, 48), 'PIN');
-            this.setOutput(true, 'Number'); this.setColour(230);
+    Blockly.Blocks['vbtn_clear'] = {
+        init(){
+            this.appendDummyInput().appendField('🎮 ล้างปุ่มเสมือน (รอกดใหม่)');
+            this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(30);
+            this.setTooltip('ล้างค่าปุ่มหลังจากประมวลผลแล้ว');
         }
     };
-    Arduino['analog_read'] = function(b) { return [`analogRead(${b.getFieldValue('PIN')})`, Arduino.ORDER_ATOMIC]; };
+    Arduino['vbtn_clear'] = b => {
+        Arduino.definitions_['vbtn_var'] = 'char _vbtn = 0;';
+        return '  _vbtn = 0;\n';
+    };
+})();
 
-    // --- Serial ---
-    Blockly.Blocks['serial_begin'] = {
-        init: function() {
-            this.appendDummyInput().appendField('📡 เริ่ม Serial').appendField(new Blockly.FieldDropdown([['115200','115200'],['9600','9600'],['57600','57600']]), 'BAUD').appendField('baud');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(160);
+// ── Time ──────────────────────────────────────────────
+Blockly.Blocks['base_delay_ms'] = {
+    init() {
+        this.appendDummyInput().appendField('⏳ รอ').appendField(new Blockly.FieldNumber(500,0),'MS').appendField('มิลลิวินาที');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120);
+    }
+};
+Arduino['base_delay_ms'] = b => `  delay(${b.getFieldValue('MS')});\n`;
+
+Blockly.Blocks['base_delay_s'] = {
+    init() {
+        this.appendDummyInput().appendField('⏳ รอ').appendField(new Blockly.FieldNumber(1,0),'SEC').appendField('วินาที');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120);
+    }
+};
+Arduino['base_delay_s'] = b => `  delay(${Math.round(b.getFieldValue('SEC') * 1000)});\n`;
+
+Blockly.Blocks['millis_block'] = {
+    init() { this.appendDummyInput().appendField('⏱️ เวลาที่ผ่านมา (ms)'); this.setOutput(true,'Number'); this.setColour(120); }
+};
+Arduino['millis_block'] = () => ['millis()', Arduino.ORDER_ATOMIC];
+
+// ── Loop ──────────────────────────────────────────────
+Blockly.Blocks['while_loop'] = {
+    init() {
+        this.appendDummyInput().appendField('🔁 ทำซ้ำตลอดไป while (true)');
+        this.appendStatementInput('DO').setCheck(null).appendField('ทำ');
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120);
+    }
+};
+Arduino['while_loop'] = b => {
+    const body = Arduino.statementToCode(b,'DO') || '    // empty\n';
+    return `  while (true) {\n${body}  }\n`;
+};
+
+// ── Built-in Blockly blocks ───────────────────────────
+Arduino['controls_repeat_ext'] = b => {
+    const times = Arduino.valueToCode(b,'TIMES',Arduino.ORDER_NONE) || '10';
+    return `  for (int i = 0; i < ${times}; i++) {\n${Arduino.statementToCode(b,'DO')}  }\n`;
+};
+
+Arduino['controls_for'] = b => {
+    const v    = b.getFieldValue('VAR') || 'i';
+    const from = Arduino.valueToCode(b,'FROM',Arduino.ORDER_NONE) || '0';
+    const to   = Arduino.valueToCode(b,'TO',Arduino.ORDER_NONE)   || '9';
+    const by   = Arduino.valueToCode(b,'BY',Arduino.ORDER_NONE)   || '1';
+    Arduino.definitions_['var_for_' + v] = `int ${v} = 0;`;
+    return `  for (${v} = ${from}; ${v} <= ${to}; ${v} += ${by}) {\n${Arduino.statementToCode(b,'DO')}  }\n`;
+};
+
+Arduino['controls_if'] = b => {
+    let code = '';
+    for (let i = 0; i <= (b.elseifCount_ || 0); i++) {
+        const cond = Arduino.valueToCode(b,'IF'+i,Arduino.ORDER_NONE) || 'false';
+        code += (i===0 ? '  if' : '  else if') + ` (${cond}) {\n${Arduino.statementToCode(b,'DO'+i)}  }\n`;
+    }
+    if (b.elseCount_) code += `  else {\n${Arduino.statementToCode(b,'ELSE')}  }\n`;
+    return code;
+};
+
+Arduino['logic_compare'] = b => {
+    const ops = {EQ:'==',NEQ:'!=',LT:'<',LTE:'<=',GT:'>',GTE:'>='};
+    const a = Arduino.valueToCode(b,'A',Arduino.ORDER_RELATIONAL) || '0';
+    const bv= Arduino.valueToCode(b,'B',Arduino.ORDER_RELATIONAL) || '0';
+    return [`${a} ${ops[b.getFieldValue('OP')]} ${bv}`, Arduino.ORDER_RELATIONAL];
+};
+
+Arduino['logic_operation'] = b => {
+    const op = b.getFieldValue('OP')==='AND' ? '&&' : '||';
+    const a  = Arduino.valueToCode(b,'A',Arduino.ORDER_AND) || 'false';
+    const bv = Arduino.valueToCode(b,'B',Arduino.ORDER_AND) || 'false';
+    return [`${a} ${op} ${bv}`, Arduino.ORDER_AND];
+};
+
+Arduino['logic_negate']  = b => [`!(${Arduino.valueToCode(b,'BOOL',Arduino.ORDER_UNARY)||'false'})`, Arduino.ORDER_UNARY];
+Arduino['logic_boolean'] = b => [b.getFieldValue('BOOL')==='TRUE' ? 'true':'false', Arduino.ORDER_ATOMIC];
+Arduino['math_number']   = b => [String(b.getFieldValue('NUM')), Arduino.ORDER_ATOMIC];
+
+Arduino['math_arithmetic'] = b => {
+    const ops = {ADD:'+',MINUS:'-',MULTIPLY:'*',DIVIDE:'/',POWER:'**'};
+    const a  = Arduino.valueToCode(b,'A',Arduino.ORDER_ADD) || '0';
+    const bv = Arduino.valueToCode(b,'B',Arduino.ORDER_ADD) || '0';
+    return [`${a} ${ops[b.getFieldValue('OP')]} ${bv}`, Arduino.ORDER_ADD];
+};
+
+Arduino['math_modulo'] = b => {
+    const a  = Arduino.valueToCode(b,'DIVIDEND',Arduino.ORDER_MULTIPLY) || '0';
+    const bv = Arduino.valueToCode(b,'DIVISOR',Arduino.ORDER_MULTIPLY)  || '1';
+    return [`${a} % ${bv}`, Arduino.ORDER_MULTIPLY];
+};
+
+// ── Math helpers ──────────────────────────────────────
+Blockly.Blocks['math_map_value'] = {
+    init() {
+        this.appendValueInput('X').setCheck('Number').appendField('🗺️ แปลงค่า');
+        this.appendValueInput('IN_MIN').setCheck('Number').appendField('จากช่วง');
+        this.appendValueInput('IN_MAX').setCheck('Number').appendField('ถึง');
+        this.appendValueInput('OUT_MIN').setCheck('Number').appendField('→ ช่วงใหม่');
+        this.appendValueInput('OUT_MAX').setCheck('Number').appendField('ถึง');
+        this.setInputsInline(true); this.setOutput(true,'Number'); this.setColour(230);
+    }
+};
+Arduino['math_map_value'] = b => {
+    const x    = Arduino.valueToCode(b,'X',Arduino.ORDER_NONE)      ||'0';
+    const iMin = Arduino.valueToCode(b,'IN_MIN',Arduino.ORDER_NONE) ||'0';
+    const iMax = Arduino.valueToCode(b,'IN_MAX',Arduino.ORDER_NONE) ||'1023';
+    const oMin = Arduino.valueToCode(b,'OUT_MIN',Arduino.ORDER_NONE)||'0';
+    const oMax = Arduino.valueToCode(b,'OUT_MAX',Arduino.ORDER_NONE)||'255';
+    return [`map(${x}, ${iMin}, ${iMax}, ${oMin}, ${oMax})`, Arduino.ORDER_ATOMIC];
+};
+
+Blockly.Blocks['math_constrain_value'] = {
+    init() {
+        this.appendValueInput('X').setCheck('Number').appendField('📌 จำกัดค่า');
+        this.appendValueInput('LOW').setCheck('Number').appendField('ต่ำสุด');
+        this.appendValueInput('HIGH').setCheck('Number').appendField('สูงสุด');
+        this.setInputsInline(true); this.setOutput(true,'Number'); this.setColour(230);
+    }
+};
+Arduino['math_constrain_value'] = b => {
+    const x = Arduino.valueToCode(b,'X',Arduino.ORDER_NONE)    ||'0';
+    const l = Arduino.valueToCode(b,'LOW',Arduino.ORDER_NONE)  ||'0';
+    const h = Arduino.valueToCode(b,'HIGH',Arduino.ORDER_NONE) ||'255';
+    return [`constrain(${x}, ${l}, ${h})`, Arduino.ORDER_ATOMIC];
+};
+
+Blockly.Blocks['math_random_range'] = {
+    init() {
+        this.appendValueInput('LOW').setCheck('Number').appendField('🎲 สุ่มตัวเลข ต่ำสุด');
+        this.appendValueInput('HIGH').setCheck('Number').appendField('สูงสุด');
+        this.setInputsInline(true); this.setOutput(true,'Number'); this.setColour(230);
+    }
+};
+Arduino['math_random_range'] = b => {
+    const l = Arduino.valueToCode(b,'LOW',Arduino.ORDER_NONE)  ||'0';
+    const h = Arduino.valueToCode(b,'HIGH',Arduino.ORDER_NONE) ||'100';
+    return [`random(${l}, ${h} + 1)`, Arduino.ORDER_ATOMIC];
+};
+
+Blockly.Blocks['math_abs'] = {
+    init() {
+        this.appendValueInput('NUM').setCheck('Number').appendField('| | ค่าสัมบูรณ์');
+        this.setOutput(true,'Number'); this.setColour(230);
+    }
+};
+Arduino['math_abs'] = b => [`abs(${Arduino.valueToCode(b,'NUM',Arduino.ORDER_NONE)||'0'})`, Arduino.ORDER_ATOMIC];
+
+Blockly.Blocks['math_sqrt'] = {
+    init() {
+        this.appendValueInput('NUM').setCheck('Number').appendField('√ รากที่สอง');
+        this.setOutput(true,'Number'); this.setColour(230);
+    }
+};
+Arduino['math_sqrt'] = b => [`sqrt(${Arduino.valueToCode(b,'NUM',Arduino.ORDER_NONE)||'0'})`, Arduino.ORDER_ATOMIC];
+
+// ── Compare (=, >, <, >=, <=, ≠) ────────────────────────────────
+(function() {
+    const OP_OPTIONS = [
+        ['= เท่ากับ',      'EQ'],
+        ['≠ ไม่เท่ากับ',   'NEQ'],
+        ['> มากกว่า',     'GT'],
+        ['≥ มากกว่าเท่ากับ','GTE'],
+        ['< น้อยกว่า',    'LT'],
+        ['≤ น้อยกว่าเท่ากับ','LTE'],
+    ];
+    Blockly.Blocks['math_compare'] = {
+        init() {
+            this.appendValueInput('A').setCheck('Number');
+            this.appendDummyInput().appendField(new Blockly.FieldDropdown(OP_OPTIONS), 'OP');
+            this.appendValueInput('B').setCheck('Number');
+            this.setInputsInline(true);
+            this.setOutput(true, 'Boolean');
+            this.setColour(210);
+            this.setTooltip('เปรียบเทียบตัวเลข 2 ตัว');
         }
     };
-    Arduino['serial_begin'] = function(b) {
-        const baud = b.getFieldValue('BAUD');
-        Arduino.setups_[`serial_begin_${baud}`] = `  Serial.begin(${baud});`;
-        return '';
+    const SYMBOL = {EQ:'==', NEQ:'!=', GT:'>', GTE:'>=', LT:'<', LTE:'<='};
+    Arduino['math_compare'] = b => {
+        const a  = Arduino.valueToCode(b,'A', Arduino.ORDER_RELATIONAL) || '0';
+        const bv = Arduino.valueToCode(b,'B', Arduino.ORDER_RELATIONAL) || '0';
+        return [`${a} ${SYMBOL[b.getFieldValue('OP')]} ${bv}`, Arduino.ORDER_RELATIONAL];
     };
+})();
 
-    Blockly.Blocks['serial_print'] = {
-        init: function() {
-            this.appendValueInput('TEXT').setCheck(null).appendField('🖨️ Serial.print');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(160);
+// ── Simple Variable Conditions (int a=0 style) ───────────────────
+function toSafeIdent(name) {
+    const s = String(name || '').trim() || 'a';
+    let out = s.replace(/[^A-Za-z0-9_]/g, '_');
+    if (!/^[A-Za-z_]/.test(out)) out = 'v_' + out;
+    return out;
+}
+
+Blockly.Blocks['var_int_init'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🧮 ประกาศ int')
+            .appendField(new Blockly.FieldTextInput('a'), 'NAME')
+            .appendField('=')
+            .appendField(new Blockly.FieldNumber(0, -999999, 999999, 1), 'VAL');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+        this.setColour(330);
+        this.setTooltip('สร้างตัวแปรแบบ int ระดับ global เช่น int a = 0;');
+    }
+};
+Arduino['var_int_init'] = b => {
+    const raw = b.getFieldValue('NAME');
+    const name = toSafeIdent(raw);
+    const val = parseInt(b.getFieldValue('VAL') || '0', 10);
+    Arduino.definitions_[`var_int_${name}`] = `int ${name} = ${isNaN(val) ? 0 : val};`;
+    return '';
+};
+
+Blockly.Blocks['var_set_value'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('📝 กำหนดค่า')
+            .appendField(new Blockly.FieldTextInput('a'), 'NAME')
+            .appendField('=');
+        this.appendValueInput('VALUE').setCheck('Number');
+        this.setInputsInline(true);
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+        this.setColour(330);
+        this.setTooltip('กำหนดค่าตัวแปร เช่น a = 10');
+    }
+};
+Arduino['var_set_value'] = b => {
+    const name = toSafeIdent(b.getFieldValue('NAME'));
+    const v = Arduino.valueToCode(b, 'VALUE', Arduino.ORDER_NONE) || '0';
+    if (!Arduino.definitions_[`var_int_${name}`]) Arduino.definitions_[`var_int_${name}`] = `int ${name} = 0;`;
+    return `  ${name} = (${v});\n`;
+};
+
+Blockly.Blocks['var_change_by'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('➕ เพิ่มค่า')
+            .appendField(new Blockly.FieldTextInput('a'), 'NAME')
+            .appendField('ทีละ');
+        this.appendValueInput('DELTA').setCheck('Number');
+        this.setInputsInline(true);
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+        this.setColour(330);
+        this.setTooltip('เพิ่ม/ลดค่าตัวแปร เช่น a += 1 หรือ a += -1');
+    }
+};
+Arduino['var_change_by'] = b => {
+    const name = toSafeIdent(b.getFieldValue('NAME'));
+    const d = Arduino.valueToCode(b, 'DELTA', Arduino.ORDER_NONE) || '1';
+    if (!Arduino.definitions_[`var_int_${name}`]) Arduino.definitions_[`var_int_${name}`] = `int ${name} = 0;`;
+    return `  ${name} += (${d});\n`;
+};
+
+Blockly.Blocks['var_compare_value'] = {
+    init() {
+        this.appendDummyInput()
+            .appendField('🔎 ตัวแปร')
+            .appendField(new Blockly.FieldTextInput('a'), 'NAME')
+            .appendField(new Blockly.FieldDropdown([
+                ['= เท่ากับ', 'EQ'],
+                ['≠ ไม่เท่ากับ', 'NEQ'],
+                ['> มากกว่า', 'GT'],
+                ['≥ มากกว่าหรือเท่ากับ', 'GTE'],
+                ['< น้อยกว่า', 'LT'],
+                ['≤ น้อยกว่าหรือเท่ากับ', 'LTE']
+            ]), 'OP');
+        this.appendValueInput('VALUE').setCheck('Number');
+        this.setInputsInline(true);
+        this.setOutput(true, 'Boolean');
+        this.setColour(330);
+        this.setTooltip('ใช้ต่อกับ if เช่น if (a > 0)');
+    }
+};
+Arduino['var_compare_value'] = b => {
+    const name = toSafeIdent(b.getFieldValue('NAME'));
+    const v = Arduino.valueToCode(b, 'VALUE', Arduino.ORDER_RELATIONAL) || '0';
+    const op = { EQ:'==', NEQ:'!=', GT:'>', GTE:'>=', LT:'<', LTE:'<=' }[b.getFieldValue('OP')] || '==';
+    if (!Arduino.definitions_[`var_int_${name}`]) Arduino.definitions_[`var_int_${name}`] = `int ${name} = 0;`;
+    return [`${name} ${op} (${v})`, Arduino.ORDER_RELATIONAL];
+};
+
+// ── Text ──────────────────────────────────────────────
+Arduino['text'] = b => [`"${b.getFieldValue('TEXT')}"`, Arduino.ORDER_ATOMIC];
+Arduino['text_join'] = b => {
+    const parts = [];
+    for (let i = 0; i < (b.itemCount_ || 2); i++)
+        parts.push(Arduino.valueToCode(b,'ADD'+i,Arduino.ORDER_NONE)||'""');
+    return [parts.join(' + '), Arduino.ORDER_ADD];
+};
+Arduino['text_length'] = b => {
+    const s = Arduino.valueToCode(b,'VALUE',Arduino.ORDER_NONE)||'""';
+    return [`String(${s}).length()`, Arduino.ORDER_ATOMIC];
+};
+
+// ── Variables ─────────────────────────────────────────
+Arduino['variables_get'] = b => {
+    const name = Arduino.nameDB_.getName(b.getFieldValue('VAR'), Blockly.Names.NameType.VARIABLE);
+    return [name, Arduino.ORDER_ATOMIC];
+};
+Arduino['variables_set'] = b => {
+    const name = Arduino.nameDB_.getName(b.getFieldValue('VAR'), Blockly.Names.NameType.VARIABLE);
+    const val  = Arduino.valueToCode(b,'VALUE',Arduino.ORDER_NONE) || '0';
+    if (!Arduino.definitions_['var_' + name]) Arduino.definitions_['var_' + name] = `float ${name} = 0;`;
+    return `  ${name} = ${val};\n`;
+};
+
+// ── Procedures ────────────────────────────────────────
+Arduino['procedures_defnoreturn'] = b => {
+    const funcName = Arduino.nameDB_.getName(b.getFieldValue('NAME'), 'PROCEDURE');
+    const args = b.arguments_ || [];
+    for (const a of args) if (!Arduino.definitions_['var_arg_'+a]) Arduino.definitions_['var_arg_'+a] = `float ${a} = 0;`;
+    const argStr = args.map(a=>`float ${a}`).join(', ');
+    const body   = Arduino.statementToCode(b,'STACK') || '  // empty\n';
+    Arduino.definitions_['func_' + funcName] = `void ${funcName}(${argStr}) {\n${body}}`;
+    return '';
+};
+Arduino['procedures_defreturn'] = b => {
+    const funcName = Arduino.nameDB_.getName(b.getFieldValue('NAME'), 'PROCEDURE');
+    const args = b.arguments_ || [];
+    const argStr = args.map(a=>`float ${a}`).join(', ');
+    const body   = Arduino.statementToCode(b,'STACK') || '';
+    const retVal = Arduino.valueToCode(b,'RETURN',Arduino.ORDER_NONE) || '0';
+    Arduino.definitions_['func_' + funcName] = `float ${funcName}(${argStr}) {\n${body}  return ${retVal};\n}`;
+    return '';
+};
+Arduino['procedures_callnoreturn'] = b => {
+    const funcName = Arduino.nameDB_.getName(b.getFieldValue('NAME'), 'PROCEDURE');
+    const args = b.arguments_ || [];
+    const argVals = args.map((_,i) => Arduino.valueToCode(b,'ARG'+i,Arduino.ORDER_NONE)||'0');
+    return `  ${funcName}(${argVals.join(', ')});\n`;
+};
+Arduino['procedures_callreturn'] = b => {
+    const funcName = Arduino.nameDB_.getName(b.getFieldValue('NAME'), 'PROCEDURE');
+    const args = b.arguments_ || [];
+    const argVals = args.map((_,i) => Arduino.valueToCode(b,'ARG'+i,Arduino.ORDER_NONE)||'0');
+    return [`${funcName}(${argVals.join(', ')})`, Arduino.ORDER_ATOMIC];
+};
+Arduino['procedures_ifreturn'] = b => {
+    const cond = Arduino.valueToCode(b,'CONDITION',Arduino.ORDER_NONE) || 'false';
+    const val  = b.hasReturnValue_ ? (Arduino.valueToCode(b,'VALUE',Arduino.ORDER_NONE)||'0') : '';
+    return b.hasReturnValue_ ? `  if (${cond}) return ${val};\n` : `  if (${cond}) return;\n`;
+};
+
+// ═══════════════════════════════════════════════════════
+// Blockly v10+ forBlock compatibility + init()
+// ═══════════════════════════════════════════════════════
+Arduino.forBlock = Arduino.forBlock || {};
+Object.getOwnPropertyNames(Arduino).forEach(k => {
+    if (typeof Arduino[k] === 'function' && !(k in Arduino.forBlock))
+        Arduino.forBlock[k] = Arduino[k];
+});
+
+Arduino.init = function(workspace) {
+    Arduino.definitions_ = Object.create(null);
+    Arduino.setups_      = Object.create(null);
+    if (typeof Blockly.Names !== 'undefined') {
+        Arduino.nameDB_ = new Blockly.Names('');
+        Arduino.nameDB_.reset();
+        if (workspace && workspace.getVariableMap)
+            Arduino.nameDB_.setVariableMap(workspace.getVariableMap());
+    }
+};
+
+// ═══════════════════════════════════════════════════════
+// 3. Workspace
+// ═══════════════════════════════════════════════════════
+const workspace = Blockly.inject('blocklyDiv', {
+    toolbox: document.getElementById('toolbox'),
+    grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
+    zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
+    trashcan: true,
+    theme: Blockly.Theme.defineTheme('modulux', {
+        base: Blockly.Themes.Classic,
+        componentStyles: { workspaceBackgroundColour: '#f0f3ff' }
+    })
+});
+
+workspace.addChangeListener(() => {
+    if (document.getElementById('code-panel').classList.contains('visible')) updateCodePreview();
+    // auto-save ทุกครั้งที่ workspace เปลี่ยน
+    try {
+        if (typeof Blockly.serialization !== 'undefined') {
+            const state = Blockly.serialization.workspaces.save(workspace);
+            localStorage.setItem('modulux_autosave', JSON.stringify({ format:'json', data: state }));
+        } else {
+            const xml = Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(workspace));
+            localStorage.setItem('modulux_autosave', JSON.stringify({ format:'xml', data: xml }));
         }
-    };
-    Arduino['serial_print'] = function(b) {
-        Arduino.setups_['serial_begin'] = '  Serial.begin(115200);';
-        return `  Serial.print(${Arduino.valueToCode(b, 'TEXT', Arduino.ORDER_NONE) || '"Hello World"'});\n`;
-    };
+    } catch(e) {}
+});
 
-    Blockly.Blocks['serial_println'] = {
-        init: function() {
-            this.appendValueInput('TEXT').setCheck(null).appendField('🖨️ Serial.println');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(160);
+// โหลด auto-save เมื่อเปิดหน้า
+(function restoreAutosave() {
+    try {
+        const raw = localStorage.getItem('modulux_autosave');
+        if (!raw) return;
+        let saved;
+        try { saved = JSON.parse(raw); } catch(e) { return; }
+        if (saved.format === 'json' && typeof Blockly.serialization !== 'undefined') {
+            Blockly.serialization.workspaces.load(saved.data, workspace);
+        } else if (saved.format === 'xml' || typeof saved.data === 'string') {
+            const xmlText = saved.data || saved;
+            const dom = Blockly.Xml.textToDom(xmlText);
+            if (dom) Blockly.Xml.domToWorkspace(dom, workspace);
         }
-    };
-    Arduino['serial_println'] = function(b) {
-        Arduino.setups_['serial_begin'] = '  Serial.begin(115200);';
-        return `  Serial.println(${Arduino.valueToCode(b, 'TEXT', Arduino.ORDER_NONE) || '"Hello World"'});\n`;
-    };
+    } catch(e) { console.warn('autosave restore failed:', e); }
+})();
 
-    // --- เวลา ---
-    Blockly.Blocks['base_delay_ms'] = {
-        init: function() {
-            this.appendDummyInput().appendField('⏳ รอ').appendField(new Blockly.FieldNumber(500, 0), 'MS').appendField('ms');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(120);
+// ═══════════════════════════════════════════════════════
+// 4. Board helpers
+// ═══════════════════════════════════════════════════════
+function getBoardFQBN() { return document.getElementById('board-select').value; }
+function getBoardName() {
+    const sel = document.getElementById('board-select');
+    return sel.options[sel.selectedIndex]?.dataset.name || sel.value;
+}
+function onBoardChange() {
+    logToConsole(`\n🔲 เปลี่ยนบอร์ดเป็น: ${getBoardName()} (${getBoardFQBN()})`);
+    if (document.getElementById('code-panel').classList.contains('visible')) updateCodePreview();
+}
+
+// ═══════════════════════════════════════════════════════
+// 5. Code Panel
+// ═══════════════════════════════════════════════════════
+function toggleCodePanel() {
+    const panel = document.getElementById('code-panel');
+    panel.classList.toggle('visible');
+    if (panel.classList.contains('visible')) updateCodePreview();
+}
+function updateCodePreview() {
+    try { document.getElementById('code-output').textContent = Arduino.workspaceToCode(workspace); }
+    catch(e) { document.getElementById('code-output').textContent = '// Error: ' + e; }
+}
+function copyCode() {
+    navigator.clipboard.writeText(Arduino.workspaceToCode(workspace))
+        .then(() => logToConsole('\n📋 คัดลอกโค้ดแล้ว'));
+}
+function downloadCode() {
+    const blob = new Blob([Arduino.workspaceToCode(workspace)], { type:'text/plain' });
+    const a = document.createElement('a');
+    a.download = 'modulux_program.ino'; a.href = URL.createObjectURL(blob); a.click();
+    logToConsole('\n💾 ดาวน์โหลด modulux_program.ino แล้ว');
+}
+
+async function readCodeFromBoard() {
+    const btn = document.getElementById('btn-readcode');
+    const dot = document.getElementById('server-dot');
+    if (!dot.classList.contains('online')) {
+        await checkServer();
+        if (!dot.classList.contains('online')) {
+            logToConsole('\n⚠️ Server ยังไม่พร้อม — กรุณารัน start_server.bat ก่อน');
+            return;
         }
-    };
-    Arduino['base_delay_ms'] = function(b) { return `  delay(${b.getFieldValue('MS')});\n`; };
-
-    Blockly.Blocks['base_delay_s'] = {
-        init: function() {
-            this.appendDummyInput().appendField('⏳ รอ').appendField(new Blockly.FieldNumber(1, 0), 'SEC').appendField('วินาที');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(120);
+    }
+    btn.disabled = true;
+    try {
+        const resp = await fetch(SERVER + '/readcode');
+        if (resp.status === 404) {
+            logToConsole('\n⚠️ ยังไม่มีโค้ดที่เคย Upload — กรุณา Compile & Upload ก่อน');
+            return;
         }
-    };
-    Arduino['base_delay_s'] = function(b) { return `  delay(${b.getFieldValue('SEC') * 1000});\n`; };
-
-    Blockly.Blocks['millis_block'] = {
-        init: function() { this.appendDummyInput().appendField('⏱️ millis()'); this.setOutput(true, 'Number'); this.setColour(120); }
-    };
-    Arduino['millis_block'] = function() { return ['millis()', Arduino.ORDER_ATOMIC]; };
-
-    // --- ลูป ---
-    Blockly.Blocks['while_loop'] = {
-        init: function() {
-            this.appendDummyInput().appendField('🔁 while (true)');
-            this.appendStatementInput('DO').setCheck(null).appendField('ทำ');
-            this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(120);
-        }
-    };
-    Arduino['while_loop'] = function(b) {
-        return `  while (true) {\n${Arduino.statementToCode(b, 'DO') || '    // empty\n'}  }\n`;
-    };
-
-    // =============================================================
-    // 3. Built-in Blockly blocks → Arduino
-    // =============================================================
-    Arduino['controls_repeat_ext'] = function(b) {
-        const times = Arduino.valueToCode(b, 'TIMES', Arduino.ORDER_NONE) || '10';
-        return `  for (int i = 0; i < ${times}; i++) {\n${Arduino.statementToCode(b, 'DO')}  }\n`;
-    };
-
-    Arduino['controls_if'] = function(b) {
-        let code = '';
-        for (let i = 0; i <= (b.elseifCount_ || 0); i++) {
-            const cond = Arduino.valueToCode(b, 'IF' + i, Arduino.ORDER_NONE) || 'false';
-            code += (i === 0 ? '  if' : '  else if') + ` (${cond}) {\n${Arduino.statementToCode(b, 'DO' + i)}  }\n`;
-        }
-        if (b.elseCount_) code += `  else {\n${Arduino.statementToCode(b, 'ELSE')}  }\n`;
-        return code;
-    };
-
-    Arduino['logic_compare'] = function(b) {
-        const ops = { EQ:'==', NEQ:'!=', LT:'<', LTE:'<=', GT:'>', GTE:'>=' };
-        const a = Arduino.valueToCode(b, 'A', Arduino.ORDER_RELATIONAL) || '0';
-        const bv = Arduino.valueToCode(b, 'B', Arduino.ORDER_RELATIONAL) || '0';
-        return [`${a} ${ops[b.getFieldValue('OP')]} ${bv}`, Arduino.ORDER_RELATIONAL];
-    };
-
-    Arduino['logic_operation'] = function(b) {
-        const op = b.getFieldValue('OP') === 'AND' ? '&&' : '||';
-        const a = Arduino.valueToCode(b, 'A', Arduino.ORDER_AND) || 'false';
-        const bv = Arduino.valueToCode(b, 'B', Arduino.ORDER_AND) || 'false';
-        return [`${a} ${op} ${bv}`, Arduino.ORDER_AND];
-    };
-
-    Arduino['logic_negate'] = function(b) {
-        return [`!(${Arduino.valueToCode(b, 'BOOL', Arduino.ORDER_UNARY) || 'false'})`, Arduino.ORDER_UNARY];
-    };
-
-    Arduino['math_number'] = function(b) { return [String(b.getFieldValue('NUM')), Arduino.ORDER_ATOMIC]; };
-
-    Arduino['math_arithmetic'] = function(b) {
-        const ops = { ADD:'+', MINUS:'-', MULTIPLY:'*', DIVIDE:'/', POWER:'**' };
-        const a = Arduino.valueToCode(b, 'A', Arduino.ORDER_ADD) || '0';
-        const bv = Arduino.valueToCode(b, 'B', Arduino.ORDER_ADD) || '0';
-        return [`${a} ${ops[b.getFieldValue('OP')]} ${bv}`, Arduino.ORDER_ADD];
-    };
-
-    Arduino['math_modulo'] = function(b) {
-        const a = Arduino.valueToCode(b, 'DIVIDEND', Arduino.ORDER_MULTIPLY) || '0';
-        const bv = Arduino.valueToCode(b, 'DIVISOR', Arduino.ORDER_MULTIPLY) || '0';
-        return [`${a} % ${bv}`, Arduino.ORDER_MULTIPLY];
-    };
-
-    Arduino['text'] = function(b) { return [`"${b.getFieldValue('TEXT')}"`, Arduino.ORDER_ATOMIC]; };
-
-    Arduino['variables_get'] = function(b) {
-        const name = Arduino.nameDB_.getName(b.getFieldValue('VAR'), Blockly.Names.NameType.VARIABLE);
-        return [name, Arduino.ORDER_ATOMIC];
-    };
-
-    Arduino['variables_set'] = function(b) {
-        const name = Arduino.nameDB_.getName(b.getFieldValue('VAR'), Blockly.Names.NameType.VARIABLE);
-        const val = Arduino.valueToCode(b, 'VALUE', Arduino.ORDER_NONE) || '0';
-        Arduino.definitions_['var_' + name] = `int ${name} = 0;`;
-        return `  ${name} = ${val};\n`;
-    };
-
-    // =============================================================
-    // Blockly v10+ compatibility: forward all generators to forBlock
-    // and define init() for definitions_ / nameDB_
-    // =============================================================
-    Arduino.forBlock = Arduino.forBlock || {};
-    Object.getOwnPropertyNames(Arduino).forEach(function(k) {
-        if (typeof Arduino[k] === 'function' && !(k in Arduino.forBlock)) {
-            Arduino.forBlock[k] = Arduino[k];
-        }
-    });
-
-    Arduino.init = function(workspace) {
-        Arduino.definitions_ = Object.create(null);
-        Arduino.setups_      = Object.create(null);
-        if (typeof Blockly.Names !== 'undefined') {
-            Arduino.nameDB_ = new Blockly.Names('');
-            Arduino.nameDB_.reset();
-            if (workspace && workspace.getVariableMap) {
-                Arduino.nameDB_.setVariableMap(workspace.getVariableMap());
-            }
-        }
-    };
-
-    // =============================================================
-    // 4. ตั้งค่า Workspace
-    // =============================================================
-    const workspace = Blockly.inject('blocklyDiv', {
-        toolbox: document.getElementById('toolbox'),
-        grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
-        zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
-        trashcan: true
-    });
-
-    workspace.addChangeListener(function() {
-        if (document.getElementById('code-panel').classList.contains('visible')) updateCodePreview();
-    });
-
-    // =============================================================
-    // 5. Code Panel
-    // =============================================================
-    function toggleCodePanel() {
+        if (!resp.ok) { logToConsole('\n❌ ดึงโค้ดไม่ได้: ' + resp.status); return; }
+        const code = await resp.text();
+        // แสดงโค้ดใน Code Panel
         const panel = document.getElementById('code-panel');
-        panel.classList.toggle('visible');
-        if (panel.classList.contains('visible')) updateCodePreview();
+        panel.classList.add('visible');
+        document.getElementById('code-output').textContent = code;
+        logToConsole('\n✅ ดึงโค้ด C++ จากบอร์ด (ล่าสุด) สำเร็จ — ' + code.split('\n').length + ' บรรทัด');
+    } catch(e) {
+        logToConsole('\n❌ เชื่อมต่อ Server ไม่ได้: ' + e);
+    } finally {
+        btn.disabled = false;
     }
+}
 
-    function updateCodePreview() {
-        try {
-            document.getElementById('code-output').textContent = Arduino.workspaceToCode(workspace);
-        } catch(e) {
-            document.getElementById('code-output').textContent = '// Error: ' + e;
-        }
-    }
+// ═══════════════════════════════════════════════════════
+// 6. Server + Upload
+// ═══════════════════════════════════════════════════════
+const SERVER = (function() {
+    // ถ้าเปิดผ่าน file:// → ใช้ localhost:8765
+    // ถ้าเปิดผ่าน HTTP (เช่น http://192.168.1.5:8765) → ใช้ host เดิม
+    if (window.location.protocol === 'file:') return 'http://localhost:8765';
+    return window.location.origin;
+})();
+let port, reader;
+let lastSerialPort = null;
+let serialReading = false;
+let serialShowTimestamp = true;
+let serialAutoScroll = true;
+let consoleAtLineStart = true;
 
-    function copyCode() {
-        navigator.clipboard.writeText(Arduino.workspaceToCode(workspace))
-            .then(() => logToConsole('\n📋 คัดลอกโค้ดแล้ว'));
-    }
-
-    function downloadCode() {
-        const blob = new Blob([Arduino.workspaceToCode(workspace)], { type: 'text/plain' });
-        const a = document.createElement('a');
-        a.download = 'modulux_esp32s3.ino';
-        a.href = URL.createObjectURL(blob);
-        a.click();
-        logToConsole('\n💾 ดาวน์โหลด modulux_esp32s3.ino แล้ว\n💡 นำไปเปิดใน Arduino IDE และเลือกบอร์ด "ESP32S3 Dev Module"');
-    }
-
-    // =============================================================
-    // 6. Web Serial — Serial Monitor  +  Compile/Upload via Server
-    // =============================================================
-    const SERVER = 'http://localhost:8765';
-    let port, reader;
-
-    // ---- Server status ----
-    async function checkServer() {
-        const btnUpload = document.getElementById('btn-upload');
-        try {
-            const r = await fetch(SERVER + '/status', { signal: AbortSignal.timeout(2000) });
-            const s = await r.json();
-            const dot = document.getElementById('server-dot');
-            dot.className = 'server-dot online';
-            dot.title = `Server ออนไลน์ | arduino-cli: ${s.arduino_cli ? '✅' : '❌'}`;
-            btnUpload.disabled = false;
-            btnUpload.title = '';
-            if (!s.arduino_cli) {
-                logToConsole('⚠️ arduino-cli ไม่ได้ติดตั้ง — ดูวิธีติดตั้งใน README.md');
-            }
-            await fetchPorts();
-        } catch {
-            const dot = document.getElementById('server-dot');
-            dot.className = 'server-dot offline';
-            dot.title = 'Server ออฟไลน์ — รัน start_server.bat';
-            btnUpload.disabled = true;
-            btnUpload.title = 'Server ยังไม่ทำงาน';
-            logToConsole('⚠️ Server ยังไม่ได้เริ่มทำงาน\n👉 ดับเบิลคลิก start_server.bat เพื่อเริ่ม Server\n💡 หรือกรอก COM Port เองในช่อง input ขวาจาก dropdown');
-        }
-    }
-    checkServer();
-
-    // ---- Port list ----
-    async function fetchPorts() {
-        try {
-            const r = await fetch(SERVER + '/ports', { signal: AbortSignal.timeout(5000) });
-            const ports = await r.json(); // [{port, desc}, ...]
-            const sel = document.getElementById('port-select');
-            const prev = sel.value;
-            sel.innerHTML = '<option value="">— เลือก Port —</option>';
-            ports.forEach(p => {
-                const o = document.createElement('option');
-                o.value = p.port;
-                // แสดง COM13 - USB JTAG/serial debug unit
-                const label = p.desc && p.desc !== p.port ? `${p.port} — ${p.desc}` : p.port;
-                o.textContent = label;
-                sel.appendChild(o);
-            });
-            if (prev && ports.find(p => p.port === prev)) sel.value = prev;
-            else if (ports.length === 1) sel.value = ports[0].port;
-
-            if (ports.length === 0) {
-                logToConsole('\n⚠️ ไม่พบ COM Port — ตรวจสอบการเชื่อมต่อ USB และ driver');
-                // แสดงช่อง manual input เพื่อให้กรอก COM Port เอง
-                document.getElementById('port-manual').style.display = 'block';
-                document.getElementById('port-manual').placeholder = 'เช่น COM13';
-            } else {
-                logToConsole(`\n🔍 พบ ${ports.length} Port: ` + ports.map(p => p.port).join(', '));
-                document.getElementById('port-manual').style.display = 'none';
-            }
-        } catch { /* server offline */
-            // Server ไม่พบ — แสดงช่อง manual input ให้กรอกเอง
-            document.getElementById('port-manual').style.display = 'block';
-        }
-    }
-
-    function onPortSelectChange() {
-        const sel = document.getElementById('port-select').value;
-        // ถ้าเลือก "-- เลือก Port --" แสดงช่อง manual
-        document.getElementById('port-manual').style.display = sel ? 'none' : 'block';
-    }
-
-    function getSelectedPort() {
-        const sel = document.getElementById('port-select').value;
-        if (sel) return sel;
-        return document.getElementById('port-manual').value.trim();
-    }
-
-    // ---- Compile & Upload ----
-    async function uploadCode() {
-        const portVal = getSelectedPort();
-        if (!portVal) { alert('กรุณาเลือก COM Port ก่อน หรือกรอก Port เองในช่อง input!'); return; }
-
-        const serverDot = document.getElementById('server-dot');
-        if (!serverDot.classList.contains('online')) {
-            await checkServer();
-            if (!serverDot.classList.contains('online')) {
-                alert('Server ยังไม่พร้อม (จุดหน้า Port เป็นสีแดง)\nกรุณารัน start_server.bat ก่อน');
-                return;
-            }
-        }
-
-        // ถ้า Serial Monitor เปิดอยู่ ให้ปิดก่อน (port ถูกใช้งานอยู่)
-        if (port || document.getElementById('btn-disconnect').style.display !== 'none') {
-            logToConsole('\n🔌 ปิด Serial Monitor ชั่วคราวเพื่อ Upload...');
-            await disconnectSerial();
-            await new Promise(resolve => setTimeout(resolve, 250));
-        }
-
-        const btn = document.getElementById('btn-upload');
+async function checkServer() {
+    const btn = document.getElementById('btn-upload');
+    try {
+        const r = await fetch(SERVER + '/status', { signal: AbortSignal.timeout(2000) });
+        const s = await r.json();
+        const dot = document.getElementById('server-dot');
+        dot.className = 'server-dot online';
+        dot.title = `Server ออนไลน์ | arduino-cli: ${s.arduino_cli ? '✅':'❌'}`;
+        btn.disabled = false;
+        if (!s.arduino_cli) logToConsole('⚠️ arduino-cli ไม่ได้ติดตั้ง');
+        await fetchPorts();
+    } catch {
+        const dot = document.getElementById('server-dot');
+        dot.className = 'server-dot offline';
+        dot.title = 'Server ออฟไลน์';
         btn.disabled = true;
-        btn.textContent = '⏳ กำลัง Compile...';
+        logToConsole('⚠️ Server ยังไม่ทำงาน\n👉 ดับเบิลคลิก start_server.bat เพื่อเริ่ม Server');
+    }
+}
+checkServer();
 
-        let code;
-        try { code = Arduino.workspaceToCode(workspace); }
-        catch(e) { logToConsole('\n❌ ไม่สามารถสร้างโค้ด: ' + e); btn.disabled = false; btn.textContent = '🚀 Compile & Upload'; return; }
+async function fetchPorts() {
+    try {
+        const r = await fetch(SERVER + '/ports', { signal: AbortSignal.timeout(5000) });
+        const ports = await r.json();
+        const sel = document.getElementById('port-select');
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">— เลือก Port —</option>';
+        ports.forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.port;
+            o.textContent = p.desc && p.desc !== p.port ? `${p.port} — ${p.desc}` : p.port;
+            sel.appendChild(o);
+        });
+        if (prev && ports.find(p => p.port === prev)) sel.value = prev;
+        else if (ports.length === 1) sel.value = ports[0].port;
+        if (ports.length === 0) {
+            logToConsole('\n⚠️ ไม่พบ COM Port — ตรวจสอบสาย USB');
+            document.getElementById('port-manual').style.display = 'block';
+        } else {
+            logToConsole(`\n🔍 พบ ${ports.length} Port: ${ports.map(p=>p.port).join(', ')}`);
+            document.getElementById('port-manual').style.display = 'none';
+        }
+    } catch { document.getElementById('port-manual').style.display = 'block'; }
+}
 
-        logToConsole('\n' + '═'.repeat(45));
-        logToConsole('🚀 เริ่ม Compile & Upload...');
+function onPortSelectChange() {
+    document.getElementById('port-manual').style.display =
+        document.getElementById('port-select').value ? 'none' : 'block';
+}
+function getSelectedPort() {
+    return document.getElementById('port-select').value ||
+           document.getElementById('port-manual').value.trim();
+}
 
+// ═══════════════════════════════════════════════════════
+// 6. Workspace Validator
+// ═══════════════════════════════════════════════════════
+function validateWorkspace() {
+    const errors = [];
+
+    // 1. เช็คบล็อคลอย (ไม่อยู่ใน Setup หรือ Loop)
+    let hasLoop = false, hasSetup = false;
+    const floating = [];
+    for (const block of workspace.getTopBlocks(true)) {
+        if (block.type === 'arduino_loop')  { hasLoop  = true; continue; }
+        if (block.type === 'arduino_setup') { hasSetup = true; continue; }
+        if (!block.isShadow()) floating.push(block.type);
+    }
+    if (floating.length > 0) {
+        errors.push(`❌ มีบล็อคลอยอยู่นอก Loop จำนวน ${floating.length} บล็อค`);
+        errors.push(`   → ลากบล็อคใส่ใน 🔁 Loop ก่อน Upload`);
+    }
+
+    // 2. Loop ต้องมีและต้องมีบล็อคข้างใน
+    if (!hasLoop) {
+        errors.push('❌ ไม่พบบล็อค 🔁 Loop');
+        errors.push('   → ลาก "Loop (วนซ้ำตลอดเวลา)" มาวางก่อน');
+    } else {
+        // ตรวจว่าใน Loop มีบล็อคหรือเปล่า
+        const loopBlock = workspace.getTopBlocks(true).find(b => b.type === 'arduino_loop');
+        if (loopBlock && !loopBlock.getInputTargetBlock('DO')) {
+            errors.push('⚠️ บล็อค 🔁 Loop ว่างอยู่ ยังไม่มีคำสั่งข้างใน');
+        }
+    }
+
+    // 3. เช็คบล็อคที่มี warning/error (Blockly ติด flag ไว้)
+    const allBlocks = workspace.getAllBlocks(false);
+    const warnBlocks = [];
+    for (const block of allBlocks) {
+        if (block.warning && block.warning.getText && block.warning.getText()) {
+            warnBlocks.push(block.type + ': ' + block.warning.getText());
+        }
+    }
+    if (warnBlocks.length > 0) {
+        errors.push(`❌ พบบล็อคที่มีข้อผิดพลาด (${warnBlocks.length} บล็อค):`);
+        for (const w of warnBlocks.slice(0, 3)) errors.push(`   • ${w}`);
+        if (warnBlocks.length > 3) errors.push(`   • ... และอีก ${warnBlocks.length - 3} บล็อค`);
+    }
+
+    // 4. เช็คว่ามีการ generate code ได้จริง
+    if (errors.length === 0) {
         try {
-            const resp = await fetch(SERVER + '/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code, port: portVal })
-            });
+            const code = Arduino.workspaceToCode(workspace);
+            if (!code || code.includes('void loop() {\n  //')) {
+                // loop ว่าง จะ warn แต่ไม่ block
+            }
+        } catch(e) {
+            errors.push('❌ สร้างโค้ด C++ ไม่ได้: ' + e.message);
+        }
+    }
 
-            const streamReader = resp.body.getReader();
-            const dec = new TextDecoder();
-            let buf = '';
-            while (true) {
-                const { value, done } = await streamReader.read();
-                if (done) break;
-                buf += dec.decode(value, { stream: true });
-                const lines = buf.split('\n');
-                buf = lines.pop();
-                for (const line of lines) {
-                    if (line.trim() === '[END]') break;
-                    if (line.trim()) logToConsole(line);
+    return errors;
+}
+
+async function uploadCode() {
+    const portVal = getSelectedPort();
+    if (!portVal) { alert('กรุณาเลือก COM Port ก่อน!'); return; }
+    const restoreMonitorAfterUpload = !!port;
+    const reconnectMonitorIfNeeded = async () => {
+        if (!restoreMonitorAfterUpload) return;
+        await new Promise(r => setTimeout(r, 700));
+        try {
+            await connectSerial(true);
+            logToConsole('\n✅ เปิด Serial Monitor กลับอัตโนมัติแล้ว');
+        } catch (e) {
+            logToConsole('\n⚠️ เปิด Serial Monitor อัตโนมัติไม่สำเร็จ: ' + e);
+        }
+    };
+
+    const dot = document.getElementById('server-dot');
+    if (!dot.classList.contains('online')) {
+        await checkServer();
+        if (!dot.classList.contains('online')) {
+            alert('Server ยังไม่พร้อม\nกรุณารัน start_server.bat ก่อน');
+            return;
+        }
+    }
+
+    if (port) {
+        logToConsole('\n🔌 ปิด Serial Monitor ชั่วคราวเพื่อ Upload...');
+        await disconnectSerial();
+        await new Promise(r => setTimeout(r, 300));
+    }
+
+    const btn = document.getElementById('btn-upload');
+    btn.disabled = true; btn.textContent = '⏳ กำลัง Compile...';
+
+    // ── ตรวจสอบ Workspace ก่อน Upload ──────────────────
+    const validationErrors = validateWorkspace();
+    if (validationErrors.length > 0) {
+        logToConsole('\n' + '═'.repeat(45));
+        logToConsole('🚫 อัปโหลดไม่ได้ — โค้ดไม่สมบูรณ์');
+        for (const msg of validationErrors) logToConsole(msg);
+        logToConsole('═'.repeat(45));
+        btn.disabled = false; btn.textContent = '🚀 Compile & Upload';
+        await reconnectMonitorIfNeeded();
+        return;
+    }
+
+    let code;
+    try { code = Arduino.workspaceToCode(workspace); }
+    catch(e) {
+        logToConsole('\n❌ สร้างโค้ดไม่ได้: ' + e);
+        btn.disabled=false; btn.textContent='🚀 Compile & Upload';
+        await reconnectMonitorIfNeeded();
+        return;
+    }
+
+    logToConsole('\n' + '═'.repeat(45));
+    logToConsole(`🚀 Compile & Upload → ${getBoardName()} @ ${portVal}`);
+
+    try {
+        const resp = await fetch(SERVER + '/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, port: portVal, fqbn: getBoardFQBN(), board_name: getBoardName() })
+        });
+        const sr = resp.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        while (true) {
+            const { value, done } = await sr.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const lines = buf.split('\n'); buf = lines.pop();
+            for (const line of lines) {
+                if (line.trim() === '[END]') break;
+                if (line.trim()) logToConsole(line);
+            }
+        }
+        logToConsole('═'.repeat(45));
+    } catch(e) {
+        logToConsole('\n❌ เชื่อมต่อ Server ไม่ได้: ' + e);
+        logToConsole('👉 ดับเบิลคลิก start_server.bat เพื่อเริ่ม Server');
+    } finally {
+        btn.disabled=false; btn.textContent='🚀 Compile & Upload';
+        await reconnectMonitorIfNeeded();
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// 7. Web Serial — Serial Monitor
+// ═══════════════════════════════════════════════════════
+async function connectSerial(silentReconnect = false) {
+    try {
+        if (!port) {
+            if (lastSerialPort) {
+                port = lastSerialPort;
+            } else {
+                const remembered = await navigator.serial.getPorts();
+                if (remembered.length === 1) port = remembered[0];
+                else port = await navigator.serial.requestPort();
+            }
+        }
+        if (!port.readable) await port.open({ baudRate: 115200 });
+        try { await port.setSignals({ dataTerminalReady: true, requestToSend: true }); } catch(e) {}
+        lastSerialPort = port;
+        document.getElementById('status').innerText = 'เชื่อมต่อแล้ว ✅';
+        document.getElementById('btn-connect').style.display    = 'none';
+        document.getElementById('btn-disconnect').style.display = 'inline-block';
+        if (!silentReconnect) logToConsole('\n✅ เชื่อมต่อ Serial — รอรับข้อมูลจากบอร์ด...\n');
+        readSerial();
+    } catch(err) {
+        if (!err.toString().includes('No port selected'))
+            logToConsole('\n❌ เชื่อมต่อล้มเหลว: ' + err);
+    }
+}
+
+async function readSerial() {
+    if (serialReading) return;
+    serialReading = true;
+    const decoder = new TextDecoder();
+    try {
+        while (port) {
+            if (!port.readable) {
+                try {
+                    await port.open({ baudRate: 115200 });
+                    try { await port.setSignals({ dataTerminalReady: true, requestToSend: true }); } catch(e) {}
+                } catch(e) {
+                    await new Promise(r => setTimeout(r, 120));
+                    continue;
                 }
             }
-            logToConsole('═'.repeat(45));
-        } catch(e) {
-            logToConsole('\n❌ เชื่อมต่อ Server ไม่ได้: ' + e);
-            logToConsole('👉 ดับเบิลคลิก start_server.bat เพื่อเริ่ม Server ก่อน');
-            if ((e + '').toLowerCase().includes('access is denied') || (e + '').toLowerCase().includes('port is busy')) {
-                logToConsole('💡 Port Busy: ปิดปุ่ม "⛔ ปิด Monitor" ให้เรียบร้อยก่อน แล้วค่อยกด 🚀 Compile & Upload');
-            }
-        } finally {
-            btn.disabled = false;
-            btn.textContent = '🚀 Compile & Upload';
-        }
-    }
-
-    // ---- Serial Monitor (Web Serial API) ----
-    async function connectSerial() {
-        try {
-            port = await navigator.serial.requestPort();
-            await port.open({ baudRate: 115200 });
-            document.getElementById('status').innerText = 'สถานะ: เชื่อมต่อแล้ว ✅';
-            document.getElementById('status').style.color = '#2ecc71';
-            document.getElementById('btn-connect').style.display = 'none';
-            document.getElementById('btn-disconnect').style.display = 'inline-block';
-            logToConsole('\n✅ เชื่อมต่อ Serial สำเร็จ — รอรับข้อมูลจากบอร์ด...\n');
-            readSerial();
-        } catch (err) {
-            if (!err.toString().includes('No port selected'))
-                logToConsole('\n❌ เชื่อมต่อล้มเหลว: ' + err);
-        }
-    }
-
-    async function readSerial() {
-        const decoder = new TextDecoder();
-        while (port && port.readable) {
             reader = port.readable.getReader();
             try {
                 while (true) {
@@ -649,14 +2222,12 @@ ${loopCode || '  // ลาก "Loop" บล็อกมาวาง\n'}
                     if (done) break;
                     if (value) logToConsole(decoder.decode(value));
                 }
-                break; // อ่านเสร็จปกติ
-            } catch (err) {
+                await new Promise(r => setTimeout(r, 50));
+            } catch(err) {
                 const msg = err.toString();
                 if (msg.includes('cancelled') || msg.includes('closed')) break;
-                // Framing/Parity/Buffer error = บอร์ดกำลัง Boot — รอแล้วอ่านต่อ
                 if (msg.includes('framing') || msg.includes('parity') || msg.includes('overrun') || msg.includes('buffer')) {
                     await new Promise(r => setTimeout(r, 100));
-                    // วนลูปใหม่เพื่ออ่านต่อ
                 } else {
                     logToConsole('\n⚠️ Serial: ' + err);
                     break;
@@ -666,83 +2237,253 @@ ${loopCode || '  // ลาก "Loop" บล็อกมาวาง\n'}
                 reader = null;
             }
         }
+    } finally {
+        serialReading = false;
+    }
+}
+
+function toggleVbtnPanel() {
+    const body  = document.getElementById('vbtn-body');
+    const arrow = document.getElementById('vbtn-arrow');
+    const hidden = body.style.display === 'none';
+    body.style.display  = hidden ? 'flex' : 'none';
+    arrow.textContent   = hidden ? '▼' : '▶';
+}
+
+async function sendVBtn(event, char) {
+    event.preventDefault();
+    const btn = document.getElementById('vbtn-' + char);
+    if (btn) { btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 200); }
+    if (!port || !port.writable) {
+        logToConsole(`\n🎮 [Virtual] กด: ${char}  (ยังไม่เชื่อมต่อ Serial)`);
+        return;
+    }
+    try {
+        const w = port.writable.getWriter();
+        await w.write(new TextEncoder().encode(char));
+        w.releaseLock();
+        logToConsole(`\n🎮 ส่ง: '${char}'`);
+    } catch(e) { logToConsole('\n⚠️ ส่งไม่ได้: ' + e); }
+}
+
+async function sendSerial() {
+    const input = document.getElementById('console-input');
+    const text  = input.value;
+    if (!text) return;
+    if (!port || !port.writable) { logToConsole('\n⚠️ ยังไม่ได้เชื่อมต่อ Serial Monitor'); return; }
+    try {
+        const w = port.writable.getWriter();
+        await w.write(new TextEncoder().encode(text + '\n'));
+        w.releaseLock();
+        logToConsole(`\n> ${text}`);
+        input.value = '';
+    } catch(e) { logToConsole('\n⚠️ ส่งข้อมูลไม่ได้: ' + e); }
+}
+
+async function disconnectSerial() {
+    try {
+        if (reader) { try { await reader.cancel(); } catch(e) {} }
+        if (port) {
+            try { await port.close(); } catch(e) {}
+            port = null;
+        }
+        document.getElementById('status').innerText = 'ยังไม่เชื่อมต่อ ⚪';
+        document.getElementById('btn-connect').style.display    = 'inline-block';
+        document.getElementById('btn-disconnect').style.display = 'none';
+        logToConsole('\n🔌 ตัดการเชื่อมต่อเรียบร้อย');
+    } catch(err) { logToConsole('\n⚠️ ' + err); }
+}
+
+function serialNowTag() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `[${hh}:${mm}:${ss}]`;
+}
+
+function addTimestampToLogText(text) {
+    const src = String(text);
+    if (!serialShowTimestamp) {
+        if (src.length > 0) consoleAtLineStart = src.endsWith('\n');
+        return src;
     }
 
-    async function disconnectSerial() {
+    // Serial data may arrive in partial chunks; only add timestamp at true line starts.
+    let out = '';
+    for (let i = 0; i < src.length; i++) {
+        const ch = src[i];
+        if (consoleAtLineStart && ch !== '\n') {
+            out += `${serialNowTag()} `;
+            consoleAtLineStart = false;
+        }
+        out += ch;
+        if (ch === '\n') consoleAtLineStart = true;
+    }
+    return out;
+}
+
+function clearConsole() {
+    document.getElementById('console').innerText = '';
+    consoleAtLineStart = true;
+}
+
+function initSerialMonitorControls() {
+    const ts = document.getElementById('toggle-timestamp');
+    const as = document.getElementById('toggle-autoscroll');
+    if (!ts || !as) return;
+
+    const saved = localStorage.getItem('modulux_serial_monitor_opts');
+    if (saved) {
         try {
-            if (reader) { try { await reader.cancel(); } catch(e) {} }
-            if (port)   { await port.close(); port = null; }
-            document.getElementById('status').innerText = 'สถานะ: ยังไม่ได้เชื่อมต่อ ⚪';
-            document.getElementById('status').style.color = '#ecf0f1';
-            document.getElementById('btn-connect').style.display = 'inline-block';
-            document.getElementById('btn-disconnect').style.display = 'none';
-            logToConsole('\n🔌 ตัดการเชื่อมต่อเรียบร้อย');
-        } catch (err) { logToConsole('\n⚠️ ' + err); }
+            const opts = JSON.parse(saved);
+            if (typeof opts.timestamp === 'boolean') serialShowTimestamp = opts.timestamp;
+            if (typeof opts.autoscroll === 'boolean') serialAutoScroll = opts.autoscroll;
+        } catch (e) {}
     }
 
-    function logToConsole(text) {
-        const c = document.getElementById('console');
-        c.innerText += text;
-        c.scrollTop = c.scrollHeight;
-    }
+    ts.checked = serialShowTimestamp;
+    as.checked = serialAutoScroll;
 
-    // =============================================================
-    // 7. Save / Load Project
-    // =============================================================
-    function saveProject() {
-        const blob = new Blob([Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(workspace))], { type: 'text/xml' });
-        const a = document.createElement('a');
-        a.download = 'project.modulux';
-        a.href = URL.createObjectURL(blob);
-        a.click();
-    }
+    ts.addEventListener('change', () => {
+        serialShowTimestamp = ts.checked;
+        localStorage.setItem('modulux_serial_monitor_opts', JSON.stringify({
+            timestamp: serialShowTimestamp,
+            autoscroll: serialAutoScroll
+        }));
+    });
 
-    function loadProject(event) {
-        if (!event.target.files[0]) return;
-        const fileReader = new FileReader();
-        fileReader.onload = e => {
+    as.addEventListener('change', () => {
+        serialAutoScroll = as.checked;
+        localStorage.setItem('modulux_serial_monitor_opts', JSON.stringify({
+            timestamp: serialShowTimestamp,
+            autoscroll: serialAutoScroll
+        }));
+    });
+}
+
+function logToConsole(text) {
+    const c = document.getElementById('console');
+    c.innerText += addTimestampToLogText(text);
+    if (serialAutoScroll) c.scrollTop = c.scrollHeight;
+}
+
+initSerialMonitorControls();
+
+// ╔═══════════════════════════════════════════════════════╗
+// 8. Save / Load
+// ╚═══════════════════════════════════════════════════════╝
+function saveProject() {
+    let content, ext, mime;
+    try {
+        // Blockly v10+ JSON serialization
+        const state = Blockly.serialization.workspaces.save(workspace);
+        content = JSON.stringify(state, null, 2);
+        ext  = 'modulux';
+        mime = 'application/json';
+    } catch(err) {
+        // fallback: XML
+        content = Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(workspace));
+        ext  = 'modulux';
+        mime = 'text/xml';
+    }
+    const blob = new Blob([content], { type: mime });
+    const a = document.createElement('a');
+    a.download = 'project.' + ext;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+}
+
+function loadProject(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = e => {
+        const text = e.target.result.trim();
+        try {
             workspace.clear();
-            Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(e.target.result), workspace);
-        };
-        fileReader.readAsText(event.target.files[0]);
+            if (text.startsWith('{')) {
+                // JSON format (Blockly v10+)
+                const state = JSON.parse(text);
+                Blockly.serialization.workspaces.load(state, workspace);
+            } else {
+                // XML format (ไฟล์เก่า)
+                const dom = Blockly.utils.xml.textToDom(text);
+                Blockly.Xml.domToWorkspace(dom, workspace);
+            }
+            logToConsole('\n📁 เปิดโปรเจกต์สำเร็จ: ' + file.name);
+        } catch(err) {
+            logToConsole('\n⚠️ เปิดไฟล์ไม่ได้: ' + err);
+            console.error('loadProject error:', err);
+        }
+    };
+    fr.readAsText(file);
+    // reset input เพื่อให้เปิดไฟล์เดิมซ้ำได้
+    event.target.value = '';
+}
+
+// QR Code — ใช้ qrcodejs สร้าง QR Code จาก LAN IP
+let _qrGenerated = false;
+async function showQR() {
+    const modal  = document.getElementById('qr-modal');
+    const canvas = document.getElementById('qr-canvas');
+    const urlEl  = document.getElementById('qr-url');
+    modal.style.display = 'flex';
+    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+
+    // ดึง LAN IP จาก server
+    let lanUrl = SERVER;
+    try {
+        const res  = await fetch(SERVER + '/info');
+        const info = await res.json();
+        if (info.url && !info.url.includes('127.0.0.1')) {
+            lanUrl = info.url;
+        }
+    } catch(e) {}
+
+    urlEl.textContent = lanUrl;
+
+    if (!_qrGenerated) {
+        canvas.innerHTML = '';
+        new QRCode(canvas, {
+            text:         lanUrl,
+            width:        194,
+            height:       194,
+            colorDark:    '#6c5ce7',
+            colorLight:   '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+        });
+        _qrGenerated = true;
     }
+}
 
-    // =============================================================
-    // 8. Resizable Serial Monitor Panel
-    // =============================================================
-    (function() {
-        const handle    = document.getElementById('console-resize-handle');
-        const container = document.getElementById('console-container');
-        let dragging = false, startY = 0, startH = 0;
-
-        handle.addEventListener('mousedown', function(e) {
-            dragging = true;
-            startY = e.clientY;
-            startH = container.getBoundingClientRect().height;
-            document.body.style.cursor = 'ns-resize';
-            document.body.style.userSelect = 'none';
-            e.preventDefault();
-        });
-
-        document.addEventListener('mousemove', function(e) {
-            if (!dragging) return;
-            const delta = startY - e.clientY;          // ลากขึ้น = ใหญ่ขึ้น
-            const newH  = Math.max(60, Math.min(window.innerHeight * 0.8, startH + delta));
-            container.style.height = newH + 'px';
-        });
-
-        document.addEventListener('mouseup', function() {
-            if (!dragging) return;
-            dragging = false;
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-        });
-
-        // Double-click handle เพื่อ reset กลับ 180px
-        handle.addEventListener('dblclick', function() {
-            container.style.height = '180px';
-        });
-    })();
-    </script>
+// ═══════════════════════════════════════════════════════
+// 9. Resizable Serial Monitor
+// ═══════════════════════════════════════════════════════
+(function() {
+    const handle    = document.getElementById('console-resize-handle');
+    const container = document.getElementById('console-container');
+    let dragging = false, startY = 0, startH = 0;
+    handle.addEventListener('mousedown', e => {
+        dragging = true; startY = e.clientY;
+        startH = container.getBoundingClientRect().height;
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const newH = Math.max(70, Math.min(window.innerHeight * 0.8, startH + (startY - e.clientY)));
+        container.style.height = newH + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    });
+    handle.addEventListener('dblclick', () => { container.style.height = '200px'; });
+})();
+</script>
 </body>
 </html>
